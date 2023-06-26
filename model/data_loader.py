@@ -21,8 +21,8 @@ from torch.utils.data.sampler import SubsetRandomSampler
 class METDataset(Dataset):
     """PyTorch geometric dataset from processed hit information"""
     
-    def __init__(self, root):
-        super(METDataset, self).__init__(root)
+    def __init__(self, root): 
+        super().__init__(root)
     
     def download(self):
         pass #download from xrootd or something later
@@ -37,7 +37,7 @@ class METDataset(Dataset):
     @property
     def existing_pt_names(self):
         if not hasattr(self,'pt_files'):
-            self.pt_files = sorted(glob.glob(self.processed_dir+'/*file*slice*nevent*pt'))
+            self.pt_files = sorted(glob.glob(self.processed_dir+'/dy_nevent_*_nParticles_*.pt'))
         return [f.split('/')[-1] for f in self.pt_files]
     
     @property
@@ -64,38 +64,41 @@ class METDataset(Dataset):
         #convert the npz into pytorch tensors and save them
         path = self.processed_dir
         for idx,raw_path in enumerate(tqdm(self.raw_paths)):
-            npzfile = np.load(raw_path,allow_pickle=True)
-            for ievt in range(np.shape(npzfile['x'])[1]):
-                inputs = np.array(npzfile['x'][:,ievt,:]).astype(np.float32)
-                #original: pt, eta, phi, d0, dz, mass, puppiWeight, pdgid, charge, frompv, pvref, pvAssocQuality
-                inputs=inputs.T 
-                #now: pX,pY,pT,eta,d0,dz,mass,puppiWeight,pdgId,charge,fromPV
-                x = inputs[:,3:10]
-                x=np.insert(x,0, inputs[:,0]*np.cos(inputs[:,2]),axis=1)
-                x=np.insert(x,1, inputs[:,0]*np.sin(inputs[:,2]),axis=1)
-                x=np.insert(x,2, inputs[:,0],axis=1)
-                x=np.insert(x,3, inputs[:,1],axis=1)
-                x=x[x[:,8]!=-999]
-                x=x[x[:,9]!=-999]
-                #print(x[0])
-                x = np.nan_to_num(x)
-                x = np.clip(x, -5000., 5000.)
-                assert not np.any(np.isnan(x))
-                edge_index = torch.empty((2,0), dtype=torch.long)
-                y = (np.array(npzfile['y'][ievt,:]).astype(np.float32)[None])
-                #print(y)
-                outdata = Data(x=torch.from_numpy(x),
-                               edge_index=edge_index,
-                               y=torch.from_numpy(y))
-                torch.save(outdata, osp.join(self.processed_dir,(raw_path.replace('.npz','_'+str(ievt)+'.pt')).split('/')[-1] ))
+            npzfile = np.load(raw_path,allow_pickle=True)#file contains one event
+            
+            
+            inputs = np.array(npzfile['x']).astype(np.float32)
+            #original: pt, eta, phi, d0, dz, mass, puppiWeight, pdgid, charge, frompv, pvref, pvAssocQuality
+            inputs=inputs.T 
+            #now: pX,pY,pT,eta,d0,dz,mass,puppiWeight,pdgId,charge,fromPV
+            x = inputs[:,3:10]
+            x=np.insert(x,0, inputs[:,0]*np.cos(inputs[:,2]),axis=1)
+            x=np.insert(x,1, inputs[:,0]*np.sin(inputs[:,2]),axis=1)
+            x=np.insert(x,2, inputs[:,0],axis=1)
+            x=np.insert(x,3, inputs[:,1],axis=1)
+            x=x[x[:,8]!=-999]
+            x=x[x[:,9]!=-999]
+            #print(x[0])
+            x = np.nan_to_num(x)
+            x = np.clip(x, -5000., 5000.)
+            assert not np.any(np.isnan(x))
+            edge_index = torch.empty((2,0), dtype=torch.long)
+            y = (np.array(npzfile['y'][:]).astype(np.float32)[None])
+            #print(y)
+            outdata = Data(x=torch.from_numpy(x),
+                            edge_index=edge_index,
+                            y=torch.from_numpy(y))
+            torch.save(outdata, osp.join(self.processed_dir,(raw_path.replace('.npz','.pt')).split('/')[-1] ))
 
 def fetch_dataloader(data_dir, batch_size, validation_split):
     transform = T.Cartesian(cat=False)
     dataset = METDataset(data_dir)
-    #print(dataset)
+    
+
     dataset_size = len(dataset)
     indices = list(range(dataset_size))
     split = int(np.floor(validation_split * dataset_size))
+    #print(split)
     random_seed = 42
     # fix the random generator for train and test
     # taken from https://pytorch.org/docs/1.5.0/notes/randomness.html
@@ -107,7 +110,9 @@ def fetch_dataloader(data_dir, batch_size, validation_split):
         'train':  DataLoader(train_subset, batch_size=batch_size, shuffle=False),
         'test':   DataLoader(val_subset, batch_size=batch_size, shuffle=False)
         }
+ 
     return dataloaders
+
 
 
 

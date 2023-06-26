@@ -37,6 +37,7 @@ def train(model, device, optimizer, scheduler, loss_fn, dataloader, epoch):
     loss_avg = utils.RunningAverage()
     with tqdm(total=len(dataloader)) as t:
         for data in dataloader:
+            print("data:",data)
             optimizer.zero_grad()
             data = data.to(device)
             x_cont = data.x[:,:8] #include puppi
@@ -65,6 +66,7 @@ if __name__ == '__main__':
     dataloaders = data_loader.fetch_dataloader(data_dir=args.data, 
                                                batch_size=6,
                                                validation_split=.2)
+    
     train_dl = dataloaders['train']
     test_dl = dataloaders['test']
 
@@ -142,3 +144,4 @@ if __name__ == '__main__':
         utils.save(resolutions, osp.join(model_dir, 'last.resolutions'))
 
     loss_log.close()
+

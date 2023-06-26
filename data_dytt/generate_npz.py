@@ -1,7 +1,14 @@
+"""
+script to generate npz files with event and PF candidates selections
+similar to DeepMET studies
+"""
 from coffea.nanoevents import NanoEventsFactory
 from coffea.nanoevents.schemas import NanoAODSchema,BaseSchema
 import numpy as np
+import os
 from optparse import OptionParser
+import concurrent.futures
+import glob
 import awkward as ak
 import time
 import json
@@ -15,7 +22,6 @@ def multidict_tojson(filepath, indict):
     with open(filepath, "w") as fo:
         json.dump( indict, fo)
         print("save to %s" %filepath)
-
 
 def delta_phi(obj1, obj2):
     return (obj1.phi - obj2.phi + np.pi) % (2 * np.pi) - np.pi
@@ -58,104 +64,142 @@ def run_deltar_matching(store,
 
 
 def future_savez(dataset,currentfile):
-    print("before selection : " + str(len(events_slice)) + " events")
 
-    #select muons and electrons
-
-    temp = events_slice[:]
+    print('before selection ', len(events_slice))
+    # select Muon
+    myMuon = events_slice.Muon[:]
+    myMuon['istight'] = ((events_slice.Muon.tightId == 1) & ( events_slice.Muon.pfRelIso03_all < 0.15) & (events_slice.Muon.pt > 20.))
+    events_slice['Muon'] = myMuon[myMuon.istight]
+    # select electrons
+    myElectron = events_slice.Electron[:]
+    myElectron['istight'] = ((events_slice.Electron.mvaFall17V1Iso_WP80 == 1) & (events_slice.Electron.pt > 20.0))
+    events_slice['Electron'] = myElectron[myElectron.istight]
+    # select events with n tight leptons
+    n_tight_leptons = ak.count(events_slice.Muon.pt[events_slice.Muon.istight],axis=-1)+ak.count(events_slice.Electron.pt[events_slice.Electron.istight],axis=-1)
+    # number of leptons can be larger than the required number 
+    events_selected = events_slice[n_tight_leptons >= options.n_leptons]
+    print('after selection ', len(events_selected))
     
-    tightMuonMask = ((events_slice.Muon.tightId == 1) & ( events_slice.Muon.pfRelIso03_all < 0.15) & (events_slice.Muon.pt > 20.))
-    tightElectronMask = ((events_slice.Electron.mvaFall17V1Iso_WP80 == 1) & (events_slice.Electron.pt > 20.0))
-   
-    events_slice['istightMuon'] = tightMuonMask
-    events_slice['istightElectron'] = tightElectronMask
-   
-    events_slice['Muon'] = events_slice.Muon[events_slice.istightMuon]
-    events_slice['Electron'] = events_slice.Electron[events_slice.istightElectron]
-        
-
-    n_tight_leptons = ak.count(events_slice.Muon.pt,axis=-1) + ak.count(events_slice.Electron.pt,axis=-1)
-    select_events_mask = n_tight_leptons >= options.n_leptons
-    selected_events = events_slice[select_events_mask]
-
-    muons = selected_events.Muon[selected_events.istightMuon]
-    electrons = selected_events.Electron[selected_events.istightElectron]
-
-    leptons = ak.concatenate([muons,electrons],axis=1)
+    muons = events_selected.Muon[events_selected.Muon.istight]
+    electrons = events_selected.Electron[events_selected.Electron.istight]
+    # mix leptons and sort according to pt
+    leptons = ak.concatenate( [muons, electrons], axis=1) 
     leptons = leptons[ak.argsort(leptons.pt,axis=1,ascending=False)]
-
-    #only want the first n_leptons_subtract leptons
+    leptons =  leptons[:,0:int(options.n_leptons_subtract)]
+    # only want the first n_leptons_subtract leptons
+    #print('number of leptons ', ak.count(leptons.pt, axis=-1))
     leptons_px = leptons.pt * np.cos(leptons.phi)
     leptons_py = leptons.pt * np.sin(leptons.phi)
     leptons_px = ak.sum(leptons_px,axis=1)
     leptons_py = ak.sum(leptons_py,axis=1)
-
     met_list = np.column_stack([
-            selected_events.GenMET.pt * np.cos(selected_events.GenMET.phi)+ leptons_px,
-            selected_events.GenMET.pt * np.sin(selected_events.GenMET.phi)+ leptons_py,
-            selected_events.MET.pt * np.cos(selected_events.MET.phi)+ leptons_px,
-            selected_events.MET.pt * np.sin(selected_events.MET.phi)+ leptons_py,
-            selected_events.PuppiMET.pt * np.cos(selected_events.PuppiMET.phi)+ leptons_px,
-            selected_events.PuppiMET.pt * np.sin(selected_events.PuppiMET.phi)+ leptons_py,
-            selected_events.DeepMETResponseTune.pt * np.cos(selected_events.DeepMETResponseTune.phi)+ leptons_px,
-            selected_events.DeepMETResponseTune.pt * np.sin(selected_events.DeepMETResponseTune.phi)+ leptons_py,
-            selected_events.DeepMETResolutionTune.pt * np.cos(selected_events.DeepMETResolutionTune.phi)+ leptons_px,
-            selected_events.DeepMETResolutionTune.pt * np.sin(selected_events.DeepMETResolutionTune.phi)+ leptons_py,
-            selected_events.LHE.HT
+            events_selected.GenMET.pt * np.cos(events_selected.GenMET.phi)+ leptons_px,
+            events_selected.GenMET.pt * np.sin(events_selected.GenMET.phi)+ leptons_py,
+            events_selected.MET.pt * np.cos(events_selected.MET.phi)+ leptons_px,
+            events_selected.MET.pt * np.sin(events_selected.MET.phi)+ leptons_py,
+            events_selected.PuppiMET.pt * np.cos(events_selected.PuppiMET.phi)+ leptons_px,
+            events_selected.PuppiMET.pt * np.sin(events_selected.PuppiMET.phi)+ leptons_py,
+            events_selected.DeepMETResponseTune.pt * np.cos(events_selected.DeepMETResponseTune.phi)+ leptons_px,
+            events_selected.DeepMETResponseTune.pt * np.sin(events_selected.DeepMETResponseTune.phi)+ leptons_py,
+            events_selected.DeepMETResolutionTune.pt * np.cos(events_selected.DeepMETResolutionTune.phi)+ leptons_px,
+            events_selected.DeepMETResolutionTune.pt * np.sin(events_selected.DeepMETResolutionTune.phi)+ leptons_py,
+            events_selected.LHE.HT
     ])
-    met_list=np.array(met_list)
-
-    
-    
-    overlap_removal = run_deltar_matching(selected_events.PFCands,
+    overlap_removal = run_deltar_matching(events_selected.PFCands,
                         leptons,
                         drname='deltaR',
                         radius=0.001,
                         unique=True,
                         sort=False)
-    
-    mask = ak.count(overlap_removal.deltaR,axis=-1)==0
     # remove the cloest PF particle 
     mask = ak.count(overlap_removal.deltaR,axis=-1)==0
-    #print(len(selected_events.PFCands.pt[0]))
-    selected_events['PFCands']=selected_events.PFCands[mask]
-    #print(len(selected_events.PFCands.pt[0]))
-
-    nparticles_per_event = max(ak.num(selected_events.PFCands.pt, axis=1))
-    print(len(selected_events))
-    
-    
+    #print(len(events_selected.PFCands.pt[0]))
+    events_selected['PFCands']=events_selected.PFCands[mask]
+    #print(len(events_selected.PFCands.pt[0]))
     #save the rest of PFcandidates 
-    particle_list = np.full((12,len(selected_events),nparticles_per_event),-999, dtype='float32')
-    particle_list[0]= ak.fill_none(ak.pad_none(selected_events.PFCands.pt, nparticles_per_event,clip=True),-999)
-    particle_list[1]= ak.fill_none(ak.pad_none(selected_events.PFCands.eta, nparticles_per_event,clip=True),-999)
-    particle_list[2]= ak.fill_none(ak.pad_none(selected_events.PFCands.phi, nparticles_per_event,clip=True),-999)
-    particle_list[3]= ak.fill_none(ak.pad_none(selected_events.PFCands.d0, nparticles_per_event,clip=True),-999)
-    particle_list[4]= ak.fill_none(ak.pad_none(selected_events.PFCands.dz, nparticles_per_event,clip=True),-999)
-    particle_list[5]= ak.fill_none(ak.pad_none(selected_events.PFCands.mass, nparticles_per_event,clip=True),-999)
-    particle_list[6]= ak.fill_none(ak.pad_none(selected_events.PFCands.puppiWeight, nparticles_per_event,clip=True),-999)
-    particle_list[7]= ak.fill_none(ak.pad_none(selected_events.PFCands.pdgId, nparticles_per_event,clip=True),-999)
-    particle_list[8]= ak.fill_none(ak.pad_none(selected_events.PFCands.charge, nparticles_per_event,clip=True),-999)
-    particle_list[9]= ak.fill_none(ak.pad_none(selected_events.PFCands.fromPV, nparticles_per_event,clip=True),-999)
-    particle_list[10]= ak.fill_none(ak.pad_none(selected_events.PFCands.pvRef, nparticles_per_event,clip=True),-999)
-    particle_list[11]= ak.fill_none(ak.pad_none(selected_events.PFCands.pvAssocQuality, nparticles_per_event,clip=True),-999)
+
+
+    nparticles_per_event = max(ak.num(events_selected.PFCands.pt, axis=1))
+    print("max NPF in this range: ", nparticles_per_event)
+          
+    '''
+    print("pt")
+    pt = [ ak.fill_none(ak.pad_none(events_selected.PFCands.pt, nparticles_per_event,clip=True),-999.0)]
+    print(pt)
+
+    print("eta")
+    eta =  [ ak.fill_none(ak.pad_none(events_selected.PFCands.eta, nparticles_per_event,clip=True),-999.0)]          
+    print(eta)
     
-   
+    print("phi")
+    phi =  [ ak.fill_none(ak.pad_none(events_selected.PFCands.phi, nparticles_per_event,clip=True),-999.0)]          
+    print(phi)
     
+    print("d0")
+    d0 = [ ak.fill_none(ak.pad_none(events_selected.PFCands.d0, nparticles_per_event,clip=True),-999.0) ]         
+    print(d0)
+    
+    print("dz")
+    dz = [ ak.fill_none(ak.pad_none(events_selected.PFCands.dz, nparticles_per_event,clip=True),-999.0) ]        
+    print(dz)
+    
+    print("mass")
+    mass = [ ak.fill_none(ak.pad_none(events_selected.PFCands.mass, nparticles_per_event,clip=True),-999.0) ]
+    print(mass)
+    
+    print("puppiWeight")
+    puppiWeight = [ ak.fill_none(ak.pad_none(events_selected.PFCands.puppiWeight, nparticles_per_event,clip=True),-999.0)  ]
+    print(puppiWeight)
+    
+    print("pdgId")
+    pdgId = [ ak.fill_none(ak.pad_none(events_selected.PFCands.pdgId, nparticles_per_event,clip=True),-999.0)]
+    print(pdgId)
+    
+    print("charge")
+    charge = [ ak.fill_none(ak.pad_none(events_selected.PFCands.charge, nparticles_per_event,clip=True),-999.0)]
+    print(charge)
+    
+    print("fromPV")
+    fromPV = [ ak.fill_none(ak.pad_none(events_selected.PFCands.fromPV, nparticles_per_event,clip=True),-999.0) ]
+    print(fromPV)
+    
+    print("pvRef")
+    pvRef = [ ak.fill_none(ak.pad_none(events_selected.PFCands.pvRef, nparticles_per_event,clip=True),-999.0) ]
+    print(pvRef)
+    
+    print("pvAssocQuality")
+    pvAssocQuality = [ ak.fill_none(ak.pad_none(events_selected.PFCands.pvAssocQuality, nparticles_per_event,clip=True),-999.0)]
+    print(pvAssocQuality)
+    '''
+    
+    print("concatenating")
+    try:
+        particle_list = ak.concatenate([
+                    [ ak.fill_none(ak.pad_none(events_selected.PFCands.pt, nparticles_per_event,clip=True),-999)           ] ,
+                    [ ak.fill_none(ak.pad_none(events_selected.PFCands.eta, nparticles_per_event,clip=True),-999)          ] ,
+                    [ ak.fill_none(ak.pad_none(events_selected.PFCands.phi, nparticles_per_event,clip=True),-999)          ] ,
+                    [ ak.fill_none(ak.pad_none(events_selected.PFCands.d0, nparticles_per_event,clip=True),-999)           ] ,
+                    [ ak.fill_none(ak.pad_none(events_selected.PFCands.dz, nparticles_per_event,clip=True),-999)           ] ,
+                    [ ak.fill_none(ak.pad_none(events_selected.PFCands.mass, nparticles_per_event,clip=True),-999)         ] ,
+                    [ ak.fill_none(ak.pad_none(events_selected.PFCands.puppiWeight, nparticles_per_event,clip=True),-999)  ] ,
+                    [ ak.fill_none(ak.pad_none(events_selected.PFCands.pdgId, nparticles_per_event,clip=True),-999)        ] ,
+                    [ ak.fill_none(ak.pad_none(events_selected.PFCands.charge, nparticles_per_event,clip=True),-999)        ] ,
+                    [ ak.fill_none(ak.pad_none(events_selected.PFCands.fromPV, nparticles_per_event,clip=True),-999)        ] ,
+                    [ ak.fill_none(ak.pad_none(events_selected.PFCands.pvRef, nparticles_per_event,clip=True),-999)         ] ,
+                    [ ak.fill_none(ak.pad_none(events_selected.PFCands.pvAssocQuality, nparticles_per_event,clip=True),-999)] ,
+        ])
+    except:
+        print("concatenation error")
+    
+    print(particle_list)
+    print("saving")
+    exit()
+    npz_file='/hildafs/projects/phy230010p/xiea/npzs/'+dataset+'/'+dataset+'_file'+str(currentfile)+'_slice_'+str(i)+'_nevent_'+str(len(events_selected))
+    
+    
+    np.savez(npz_file,x=particle_list,y=met_list)
     print("saving")
     
-    
-    npz_file='/hildafs/projects/phy230010p/xiea/npzs/'+dataset+'/raw/'+dataset+'_file'+str(currentfile)+'_slice_'+str(i)+'_nevent_'+str(len(selected_events))
-    
-    #,y=met_list
-    #print("met_list:", met_list.shape)
-    try:
-
-        np.savez(npz_file,x=particle_list,y=met_list)
-    except:
-        print("saving failed")
-
-
 
 
 
@@ -171,38 +215,89 @@ if __name__ == '__main__':
                           help='How many leptons to be subtracted from the Candidates list. Can not be larger than the n_leptons', default=2)
         (options, args) = parser.parse_args()
 
+        '''
         
         assert options.n_leptons >= options.n_leptons_subtract, "n_leptons_subtract can not be larger than n_leptons"
-
-        dataset=options.dataset
-
         datasetsname = {
-            "dy",
-            "tt"
+            "dy": ['DYJetsToLL/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8'],
+            "tt": ['TTTo2L2Nu/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/'],
         }
-
-        if dataset not in datasetsname:
-            print('choose one of them: ', datasetsname)
+        # Be nice to eos, save list to a file
+        #filelists = recdd()
+        #for datset in datasetsname.keys():
+        #    filelists[datset] = glob.glob('/eos/uscms/store/group/lpcjme/NanoMET/'+datasetsname[datset][0]+'/*/*/*/*root')
+        #    filelists[datset] = [x.replace('/eos/uscms','root://cmseos.fnal.gov/') for x in filelists[datset] ]
+        #multidict_tojson(JSON_LOC, filelists )
+        #exit()
+        dataset=options.dataset
+        if dataset not in datasetsname.keys():
+            print('choose one of them: ', datasetsname.keys())
             exit()
-
         #Read file from json
         with open(JSON_LOC, "r") as fo:
             file_names = json.load(fo)
         file_names = file_names[dataset]
-        print('found ', len(file_names)," files")
+        print('find ', len(file_names)," files")
         if options.startfile>=options.endfile and options.endfile!=-1:
             print("make sure options.startfile<options.endfile")
             exit()
         inpz=0
         eventperfile=5000
         currentfile=0
-        for file in file_names:
+        for ifile in file_names:
             if currentfile<options.startfile:
                 currentfile+=1
                 continue
-            events = NanoEventsFactory.from_root(file, schemaclass=NanoAODSchema).events()
+            events = NanoEventsFactory.from_root(ifile, schemaclass=NanoAODSchema).events()
             nevents_total = len(events)
-            print(file, ' Number of events:', nevents_total)
+            print(ifile, ' Number of events:', nevents_total)
+
+            for i in range(int(nevents_total / eventperfile)+1):
+                if i< int(nevents_total / eventperfile):
+                    print('from ',i*eventperfile, ' to ', (i+1)*eventperfile)
+                    events_slice = events[i*eventperfile:(i+1)*eventperfile]
+                elif i == int(nevents_total / eventperfile) and i*eventperfile<=nevents_total:
+                    print('from ',i*eventperfile, ' to ', nevents_total)
+                    events_slice = events[i*eventperfile:nevents_total]
+                else:
+                    print(' weird ... ')
+                    exit()
+                tic=time.time()
+                future_savez(dataset,currentfile)
+                toc=time.time()
+                print('time:',toc-tic)
+            currentfile+=1
+            if currentfile>=options.endfile:
+                print('=================> finished ')
+                exit()
+    '''
+        assert options.n_leptons >= options.n_leptons_subtract, "n_leptons_subtract can not be larger than n_leptons"
+        dataset=options.dataset
+        datasetsname = {
+            "dy",
+            "tt"
+        }
+        if dataset not in datasetsname:
+            print('choose one of them: ', datasetsname)
+            exit()
+        #Read file from json
+        with open(JSON_LOC, "r") as fo:
+            file_names = json.load(fo)
+        file_names = file_names[dataset]
+        print('find ', len(file_names)," files")
+        if options.startfile>=options.endfile and options.endfile!=-1:
+            print("make sure options.startfile<options.endfile")
+            exit()
+        inpz=0
+        eventperfile=5000
+        currentfile=0
+        for ifile in file_names:
+            if currentfile<options.startfile:
+                currentfile+=1
+                continue
+            events = NanoEventsFactory.from_root(ifile, schemaclass=NanoAODSchema).events()
+            nevents_total = len(events)
+            print(ifile, ' Number of events:', nevents_total)
 
             for i in range(int(nevents_total / eventperfile)+1):
                 if i< int(nevents_total / eventperfile):

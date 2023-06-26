@@ -45,10 +45,18 @@ class GraphMETNetwork(nn.Module):
         self.pdgs = [1, 2, 11, 13, 22, 130, 211]
 
     def forward(self, x_cont, x_cat, edge_index, batch):
-        emb_cont = self.embed_continuous(x_cont)        
-        emb_chrg = self.embed_charge(x_cat[:, 1] + 1)
-        emb_pv = self.embed_pv(x_cat[:, 2])
+        print("x_cont:",x_cont)
+        print("x_cat:",x_cat)
+        print("edge_index:",edge_index)
+        #print("cont")
+        emb_cont = self.embed_continuous(x_cont)   
 
+        #print('chrg')  
+        emb_chrg = self.embed_charge(x_cat[:, 1] + 1)
+
+        #print('pv')
+        emb_pv = self.embed_pv(x_cat[:, 2])
+        #print('pdg_remaap')
         pdg_remap = torch.abs(x_cat[:, 0])
         for i, pdgval in enumerate(self.pdgs):
             pdg_remap = torch.where(pdg_remap == pdgval, torch.full_like(pdg_remap, i), pdg_remap)
