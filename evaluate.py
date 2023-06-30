@@ -124,6 +124,10 @@ def evaluate(model, device, loss_fn, dataloader, metrics, deltaR, deltaR_dz, mod
         u_perp_arr=resolutions_arr[key][0]
         u_par_arr=resolutions_arr[key][1]
 
+        R_arr=np.array(R_arr) #convert to numpy array 
+        u_perp_arr=np.array(u_perp_arr)
+        u_par_arr=np.array(u_par_arr)
+
         u_perp_hist=[]
         u_perp_scaled_hist=[]
         u_par_hist=[]
@@ -131,9 +135,10 @@ def evaluate(model, device, loss_fn, dataloader, metrics, deltaR, deltaR_dz, mod
         R_hist=[]
 
         for i in range(1, len(bin_edges)):
+            print(type(inds))
+            print(type(np.where(inds==i)[0]))
+            print(type(R_arr))
             R_i=R_arr[np.where(inds==i)[0]]
-
-
             R_hist.append(np.mean(R_i))
             u_perp_i=u_perp_arr[np.where(inds==i)[0]]
             u_perp_scaled_i=u_perp_i/np.mean(R_i)

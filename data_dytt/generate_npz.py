@@ -145,7 +145,7 @@ def future_savez(dataset,currentfile):
     print("saving")
     
     
-    npz_file='/hildafs/projects/phy230010p/fep/npzs/'+dataset+'/raw/'+dataset+'_file'+str(currentfile)+'_slice_'+str(i)+'_nevent_'+str(len(selected_events))
+    npz_file='/hildafs/projects/phy230010p/fep/deepmetv2/data_dytt/'+dataset+'/raw/'+dataset+'_file'+str(currentfile)+'_slice_'+str(i)+'_nevent_'+str(len(selected_events))
     
     #,y=met_list
     #print("met_list:", met_list.shape)
