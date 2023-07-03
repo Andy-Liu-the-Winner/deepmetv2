@@ -20,38 +20,42 @@ def multidict_tojson(filepath, indict):
 
 def future_savez(i, tot):
         #tic=time.time()
-        genmet_list = [
-                events.GenMET.pt[i] * np.cos(events.GenMET.phi[i]),
-                events.GenMET.pt[i] * np.sin(events.GenMET.phi[i]),
-                events.MET.pt[i] * np.cos(events.MET.phi[i]),
-                events.MET.pt[i] * np.sin(events.MET.phi[i]),
-                events.PuppiMET.pt[i] * np.cos(events.PuppiMET.phi[i]),
-                events.PuppiMET.pt[i] * np.sin(events.PuppiMET.phi[i]),
-                events.DeepMETResponseTune.pt[i] * np.cos(events.DeepMETResponseTune.phi[i]),
-                events.DeepMETResponseTune.pt[i] * np.sin(events.DeepMETResponseTune.phi[i]),
-                events.DeepMETResolutionTune.pt[i] * np.cos(events.DeepMETResolutionTune.phi[i]),
-                events.DeepMETResolutionTune.pt[i] * np.sin(events.DeepMETResolutionTune.phi[i]),
-                events.LHE.HT[i]
-        ]
-
-        particle_list = np.column_stack([
-                      events.PFCands.pt[i],
-                      events.PFCands.eta[i],
-                      events.PFCands.phi[i],
-                      events.PFCands.mass[i],
-                      events.PFCands.d0[i],
-                      events.PFCands.dz[i],
-                      events.PFCands.pdgId[i],
-                      events.PFCands.charge[i],
-                      events.PFCands.fromPV[i],
-                      events.PFCands.puppiWeight[i],
-                      events.PFCands.pvRef[i],
-                      events.PFCands.pvAssocQuality[i]
+        genmet_list = np.column_stack([
+                events_slice.GenMET.pt * np.cos(events_slice.GenMET.phi),
+                events_slice.GenMET.pt * np.sin(events_slice.GenMET.phi),
+                events_slice.MET.pt * np.cos(events_slice.MET.phi),
+                events_slice.MET.pt * np.sin(events_slice.MET.phi),
+                events_slice.PuppiMET.pt * np.cos(events_slice.PuppiMET.phi),
+                events_slice.PuppiMET.pt * np.sin(events_slice.PuppiMET.phi),
+                events_slice.DeepMETResponseTune.pt * np.cos(events_slice.DeepMETResponseTune.phi),
+                events_slice.DeepMETResponseTune.pt * np.sin(events_slice.DeepMETResponseTune.phi),
+                events_slice.DeepMETResolutionTune.pt * np.cos(events_slice.DeepMETResolutionTune.phi),
+                events_slice.DeepMETResolutionTune.pt * np.sin(events_slice.DeepMETResolutionTune.phi),
+                events_slice.LHE.HT
         ])
-        eventi = [particle_list,genmet_list]
+        genmet_list = np.array(genmet_list)
+
+        particle_list = np.full((12,len(events_slice),nparticles_per_event),-999, dtype='float32')
+        particle_list[0] = ak.fill_none(ak.pad_none(events_slice.PFCands.pt, nparticles_per_event,clip=True),-999)
+        particle_list[1] = ak.fill_none(ak.pad_none(events_slice.PFCands.eta, nparticles_per_event,clip=True),-999)          
+        particle_list[2] = ak.fill_none(ak.pad_none(events_slice.PFCands.phi, nparticles_per_event,clip=True),-999)          
+        particle_list[3] = ak.fill_none(ak.pad_none(events_slice.PFCands.d0, nparticles_per_event,clip=True),-999)           
+        particle_list[4] = ak.fill_none(ak.pad_none(events_slice.PFCands.dz, nparticles_per_event,clip=True),-999)           
+        particle_list[5] = ak.fill_none(ak.pad_none(events_slice.PFCands.mass, nparticles_per_event,clip=True),-999)         
+        particle_list[6] = ak.fill_none(ak.pad_none(events_slice.PFCands.puppiWeight, nparticles_per_event,clip=True),-999)  
+        particle_list[7] = ak.fill_none(ak.pad_none(events_slice.PFCands.pdgId, nparticles_per_event,clip=True),-999)        
+        particle_list[8] = ak.fill_none(ak.pad_none(events_slice.PFCands.charge, nparticles_per_event,clip=True),-999)        
+        particle_list[9] = ak.fill_none(ak.pad_none(events_slice.PFCands.fromPV, nparticles_per_event,clip=True),-999)        
+        particle_list[10] = ak.fill_none(ak.pad_none(events_slice.PFCands.pvRef, nparticles_per_event,clip=True),-999)         
+        particle_list[11] = ak.fill_none(ak.pad_none(events_slice.PFCands.pvAssocQuality, nparticles_per_event,clip=True),-999)
+
+        # eventi = [particle_list,genmet_list]
+        npz_file='/hildafs/projects/phy230010p/fep/deepmetv2/data_znunu/'+dataset+'/raw/'+dataset+'_file'+str(currentfile)+'_slice_'+str(i)+'_nevent_'+str(len(events_slice))
+        np.savez(npz_file,x=particle_list,y=genmet_list) 
+
         #toc=time.time()
         #print(toc-tic)
-        return eventi
+        # return eventi
 
 
 if __name__ == '__main__':
@@ -86,7 +90,7 @@ if __name__ == '__main__':
         with open(JSON_LOC, "r") as fo:
             file_names = json.load(fo)
         file_names = file_names[dataset]
-        print('find ', len(file_names)," files")
+        print('found ', len(file_names)," files")
 
         if options.startfile>=options.endfile and options.endfile!=-1:
             print("make sure options.startfile<options.endfile")
@@ -115,35 +119,7 @@ if __name__ == '__main__':
                 nparticles_per_event = max(ak.num(events_slice.PFCands.pt, axis=1))
                 print("max NPF in this range: ", nparticles_per_event)
                 tic=time.time()
-                met_list = np.column_stack([
-                        events_slice.GenMET.pt * np.cos(events_slice.GenMET.phi),
-                        events_slice.GenMET.pt * np.sin(events_slice.GenMET.phi),
-                        events_slice.MET.pt * np.cos(events_slice.MET.phi),
-                        events_slice.MET.pt * np.sin(events_slice.MET.phi),
-                        events_slice.PuppiMET.pt * np.cos(events_slice.PuppiMET.phi),
-                        events_slice.PuppiMET.pt * np.sin(events_slice.PuppiMET.phi),
-                        events_slice.DeepMETResponseTune.pt * np.cos(events_slice.DeepMETResponseTune.phi),
-                        events_slice.DeepMETResponseTune.pt * np.sin(events_slice.DeepMETResponseTune.phi),
-                        events_slice.DeepMETResolutionTune.pt * np.cos(events_slice.DeepMETResolutionTune.phi),
-                        events_slice.DeepMETResolutionTune.pt * np.sin(events_slice.DeepMETResolutionTune.phi),
-                        events_slice.LHE.HT
-                ])
-                particle_list = ak.concatenate([
-                             [ ak.fill_none(ak.pad_none(events_slice.PFCands.pt, nparticles_per_event,clip=True),-999)           ] ,
-                             [ ak.fill_none(ak.pad_none(events_slice.PFCands.eta, nparticles_per_event,clip=True),-999)          ] ,
-                             [ ak.fill_none(ak.pad_none(events_slice.PFCands.phi, nparticles_per_event,clip=True),-999)          ] ,
-                             [ ak.fill_none(ak.pad_none(events_slice.PFCands.d0, nparticles_per_event,clip=True),-999)           ] ,
-                             [ ak.fill_none(ak.pad_none(events_slice.PFCands.dz, nparticles_per_event,clip=True),-999)           ] ,
-                             [ ak.fill_none(ak.pad_none(events_slice.PFCands.mass, nparticles_per_event,clip=True),-999)         ] ,
-                             [ ak.fill_none(ak.pad_none(events_slice.PFCands.puppiWeight, nparticles_per_event,clip=True),-999)  ] ,
-                             [ ak.fill_none(ak.pad_none(events_slice.PFCands.pdgId, nparticles_per_event,clip=True),-999)        ] ,
-                             [ ak.fill_none(ak.pad_none(events_slice.PFCands.charge, nparticles_per_event,clip=True),-999)        ] ,
-                             [ ak.fill_none(ak.pad_none(events_slice.PFCands.fromPV, nparticles_per_event,clip=True),-999)        ] ,
-                             [ ak.fill_none(ak.pad_none(events_slice.PFCands.pvRef, nparticles_per_event,clip=True),-999)         ] ,
-                             [ ak.fill_none(ak.pad_none(events_slice.PFCands.pvAssocQuality, nparticles_per_event,clip=True),-999)] ,
-                ])
-                npz_file=os.environ['PWD']+'/raw/'+dataset+'_file'+str(currentfile)+'_slice_'+str(i)+'_nevent_'+str(len(events_slice))
-                np.savez(npz_file,x=particle_list,y=met_list) 
+                future_savez(i, nevents_total) 
                 toc=time.time()
                 print('time:',toc-tic)
             currentfile+=1
