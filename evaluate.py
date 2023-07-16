@@ -87,6 +87,9 @@ def evaluate(model, device, loss_fn, dataloader, metrics, deltaR, deltaR_dz, mod
         # NB: there is a problem right now for comparing hits at the +/- pi boundary 
         edge_index = radius_graph(etaphi, r=deltaR, batch=data.batch, loop=True, max_num_neighbors=255)
         result = model(x_cont, x_cat, edge_index, data.batch)
+        print('evaluation result:')
+        print(result)
+        print(result.shape)
 
         #add dz connection
         #tic = time.time()
@@ -100,6 +103,8 @@ def evaluate(model, device, loss_fn, dataloader, metrics, deltaR, deltaR_dz, mod
         loss = loss_fn(result, data.x, data.y, data.batch)
 
         # compute all metrics on this batch
+        print(result)
+        print(result.shape)
         resolutions, qT= metrics['resolution'](result, data.x, data.y, data.batch)
         for key in resolutions_arr:
             for i in range(len(resolutions_arr[key])):
@@ -159,7 +164,7 @@ def evaluate(model, device, loss_fn, dataloader, metrics, deltaR, deltaR_dz, mod
             'u_perp_scaled_resolution': u_perp_scaled_resolution,
             'u_par_resolution': u_par_resolution,
             'u_par_scaled_resolution':u_par_scaled_resolution,
-            'R': R
+            'R': R   #response
         }
     metrics_mean = {
         'loss': np.mean(loss_avg_arr),

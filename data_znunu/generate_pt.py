@@ -66,17 +66,19 @@ class METDataset(Dataset):
             # print('existing processed:', self.existing_pt_names)
             rawfile = raw_path.split('/')[-1]
             # print('raw file:', rawfile)
-            if rawfile.replace('.npz','.pt') in self.existing_pt_names:
-                print('already processed')
-                continue
-            else:
-                print('Processing file', rawfile)
             npzfile = np.load(raw_path,allow_pickle=True)#file contains one event
             for ievt in range(np.shape(npzfile['x'])[1]):
                 print(rawfile, ievt)
+                if rawfile.replace('.npz','_'+str(ievt)+'.pt') in self.existing_pt_names:
+                    print('already processed')
+                    continue
+                else:
+                    print('Processing event', rawfile, ievt)
                 inputs = np.array(npzfile['x'][:,ievt,:]).astype(np.float32)
+                print(inputs.shape)
                 #original: pt, eta, phi, d0, dz, mass, puppiWeight, pdgid, charge, frompv, pvref, pvAssocQuality
-                inputs=inputs.T 
+                inputs=inputs.T
+                print(inputs.shape)
                 #now: pX,pY,pT,eta,d0,dz,mass,puppiWeight,pdgId,charge,fromPV
                 x = inputs[:,3:10]
                 x=np.insert(x,0, inputs[:,0]*np.cos(inputs[:,2]),axis=1)
@@ -96,13 +98,14 @@ class METDataset(Dataset):
                                 edge_index=edge_index,
                                 y=torch.from_numpy(y))
                 print('saving...')
-                torch.save(outdata, osp.join(self.processed_dir,(raw_path.replace('.npz','.pt')).split('/')[-1] ))
+                torch.save(outdata, osp.join(self.processed_dir,(raw_path.replace('.npz','_'+str(ievt)+'.pt')).split('/')[-1] ))
 
 if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option('-d', '--dataset', help='dataset', dest='dataset')
     (options, args) = parser.parse_args()
     dataset = options.dataset
-    data = METDataset(os.environ['PWD']+'/'+dataset)
-    data.process()
+    # data = METDataset(os.environ['PWD']+'/'+dataset)
+    METDataset(os.environ['PWD']+'/'+dataset).process()
+    # data.process()
 

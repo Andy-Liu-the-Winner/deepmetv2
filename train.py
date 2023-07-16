@@ -38,6 +38,7 @@ def train(model, device, optimizer, scheduler, loss_fn, dataloader, epoch):
     with tqdm(total=len(dataloader)) as t:
         for data in dataloader:
             print("data:",data)
+            print("dataloader:", dataloader)
             optimizer.zero_grad()
             data = data.to(device)
             x_cont = data.x[:,:8] #include puppi
@@ -48,6 +49,9 @@ def train(model, device, optimizer, scheduler, loss_fn, dataloader, epoch):
             # NB: there is a problem right now for comparing hits at the +/- pi boundary
             edge_index = radius_graph(etaphi, r=deltaR, batch=data.batch, loop=True, max_num_neighbors=255)
             result = model(x_cont, x_cat, edge_index, data.batch)
+            print('training result:')
+            print(result)
+            print(result.shape)
             loss = loss_fn(result, data.x, data.y, data.batch)
             loss.backward()
             optimizer.step()
@@ -70,8 +74,10 @@ if __name__ == '__main__':
     train_dl = dataloaders['train']
     test_dl = dataloaders['test']
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')    
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(device)    
     model = net.Net(8, 3).to(device) #include puppi
+    print('model initialized')
     #model = net.Net(7, 3).to(device) #remove puppi
     optimizer = torch.optim.AdamW(model.parameters(),lr=0.001)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=500, threshold=0.05)

@@ -47,16 +47,29 @@ class Net(nn.Module):
         return torch.sigmoid(weights)
 
 def loss_fn(weights, prediction, truth, batch):
+    print('prediction:', prediction.shape)
+    print('truth', truth.shape)
     px=prediction[:,0]
     py=prediction[:,1]
     true_px=truth[:,0] 
     true_py=truth[:,1]
+    print('truepx:', true_px.shape, 'px:', px.shape)
+    print('truepy:', true_py.shape, 'py:', py.shape)
     #print('HT', truth[:,10])
+    print(weights.shape)
+    print(batch.shape)
+    print('batch:', batch)
     METx = scatter_add(weights*px, batch)
     METy = scatter_add(weights*py, batch)
+    # METx = torch.reshape(METx, (METx.shape[0],1))
+    # METy = torch.reshape(METy, (METy.shape[0],1))
+    print('METx:', METx.shape)
+    print('METy:', METy.shape)
     #tzero = torch.zeros(prediction.shape[0]).to('cuda')
     #BCE = nn.BCELoss()
     #prediction[:,]: pX,pY,pT,eta,d0,dz,mass,puppiWeight,pdgId,charge,fromPV
+
+    print(METx + true_px)
     loss=0.5*( ( METx + true_px)**2 + ( METy + true_py)**2 ).mean() 
     #+ 5000*BCE(torch.where(prediction[:,9]==0, tzero, weights), torch.where(prediction[:,9]==0, tzero, prediction[:,7]))
     return loss
@@ -92,6 +105,9 @@ def u_perp_par_loss(weights, prediction, truth, batch):
 def resolution(weights, prediction, truth, batch):
     
     def getdot(vx, vy):
+        print('shapes:', vx.shape, vy.shape)
+        print('vx:', vx)
+        print('vy:', vy)
         return torch.einsum('bi,bi->b',vx,vy)
     def getscale(vx):
         return torch.sqrt(getdot(vx,vx))
@@ -101,12 +117,18 @@ def resolution(weights, prediction, truth, batch):
     qTx=truth[:,0]#*torch.cos(truth[:,1])
     qTy=truth[:,1]#*torch.sin(truth[:,1])
     # truth qT
+    print('qTx:', qTx.shape)
+    print('qTy:', qTy.shape)
     v_qT=torch.stack((qTx,qTy),dim=1)
+    print('v_qT:', v_qT.shape)
 
     pfMETx=truth[:,2]#*torch.cos(truth[:,3])
     pfMETy=truth[:,3]#*torch.sin(truth[:,3])
+    print('pfMETx:', pfMETx.shape)
+    print('pfMETy:', pfMETy.shape)
     # PF MET
     v_pfMET=torch.stack((pfMETx, pfMETy),dim=1)
+    print('v_pfMET:', v_pfMET.shape)
 
     puppiMETx=truth[:,4]#*torch.cos(truth[:,5])
     puppiMETy=truth[:,5]#*torch.sin(truth[:,5])
@@ -137,6 +159,7 @@ def resolution(weights, prediction, truth, batch):
     
     
     def compute(vector):
+        
         response = getdot(vector,v_qT)/getdot(v_qT,v_qT)
         v_paral_predict = scalermul(response, v_qT)
         u_paral_predict = getscale(v_paral_predict)-getscale(v_qT)

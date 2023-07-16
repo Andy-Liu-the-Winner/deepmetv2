@@ -35,19 +35,35 @@ def future_savez(i, tot):
         ])
         genmet_list = np.array(genmet_list)
 
-        particle_list = np.full((12,len(events_slice),nparticles_per_event),-999, dtype='float32')
-        particle_list[0] = ak.fill_none(ak.pad_none(events_slice.PFCands.pt, nparticles_per_event,clip=True),-999)
-        particle_list[1] = ak.fill_none(ak.pad_none(events_slice.PFCands.eta, nparticles_per_event,clip=True),-999)          
-        particle_list[2] = ak.fill_none(ak.pad_none(events_slice.PFCands.phi, nparticles_per_event,clip=True),-999)          
-        particle_list[3] = ak.fill_none(ak.pad_none(events_slice.PFCands.d0, nparticles_per_event,clip=True),-999)           
-        particle_list[4] = ak.fill_none(ak.pad_none(events_slice.PFCands.dz, nparticles_per_event,clip=True),-999)           
-        particle_list[5] = ak.fill_none(ak.pad_none(events_slice.PFCands.mass, nparticles_per_event,clip=True),-999)         
-        particle_list[6] = ak.fill_none(ak.pad_none(events_slice.PFCands.puppiWeight, nparticles_per_event,clip=True),-999)  
-        particle_list[7] = ak.fill_none(ak.pad_none(events_slice.PFCands.pdgId, nparticles_per_event,clip=True),-999)        
-        particle_list[8] = ak.fill_none(ak.pad_none(events_slice.PFCands.charge, nparticles_per_event,clip=True),-999)        
-        particle_list[9] = ak.fill_none(ak.pad_none(events_slice.PFCands.fromPV, nparticles_per_event,clip=True),-999)        
-        particle_list[10] = ak.fill_none(ak.pad_none(events_slice.PFCands.pvRef, nparticles_per_event,clip=True),-999)         
-        particle_list[11] = ak.fill_none(ak.pad_none(events_slice.PFCands.pvAssocQuality, nparticles_per_event,clip=True),-999)
+        # particle_list = np.full((12,len(events_slice),nparticles_per_event),-999, dtype='float32')
+        # particle_list[0] = ak.fill_none(ak.pad_none(events_slice.PFCands.pt, nparticles_per_event,clip=True),-999)
+        # particle_list[1] = ak.fill_none(ak.pad_none(events_slice.PFCands.eta, nparticles_per_event,clip=True),-999)          
+        # particle_list[2] = ak.fill_none(ak.pad_none(events_slice.PFCands.phi, nparticles_per_event,clip=True),-999)          
+        # particle_list[3] = ak.fill_none(ak.pad_none(events_slice.PFCands.d0, nparticles_per_event,clip=True),-999)           
+        # particle_list[4] = ak.fill_none(ak.pad_none(events_slice.PFCands.dz, nparticles_per_event,clip=True),-999)           
+        # particle_list[5] = ak.fill_none(ak.pad_none(events_slice.PFCands.mass, nparticles_per_event,clip=True),-999)         
+        # particle_list[6] = ak.fill_none(ak.pad_none(events_slice.PFCands.puppiWeight, nparticles_per_event,clip=True),-999)  
+        # particle_list[7] = ak.fill_none(ak.pad_none(events_slice.PFCands.pdgId, nparticles_per_event,clip=True),-999)        
+        # particle_list[8] = ak.fill_none(ak.pad_none(events_slice.PFCands.charge, nparticles_per_event,clip=True),-999)        
+        # particle_list[9] = ak.fill_none(ak.pad_none(events_slice.PFCands.fromPV, nparticles_per_event,clip=True),-999)        
+        # particle_list[10] = ak.fill_none(ak.pad_none(events_slice.PFCands.pvRef, nparticles_per_event,clip=True),-999)         
+        # particle_list[11] = ak.fill_none(ak.pad_none(events_slice.PFCands.pvAssocQuality, nparticles_per_event,clip=True),-999)
+
+        particle_list = np.column_stack([
+                      events_slice.PFCands.pt[i],
+                      events_slice.PFCands.eta[i],
+                      events_slice.PFCands.phi[i],
+                      events_slice.PFCands.mass[i],
+                      events_slice.PFCands.d0[i],
+                      events_slice.PFCands.dz[i],
+                      events_slice.PFCands.pdgId[i],
+                      events_slice.PFCands.charge[i],
+                      events_slice.PFCands.fromPV[i],
+                      events_slice.PFCands.puppiWeight[i],
+                      events_slice.PFCands.pvRef[i],
+                      events_slice.PFCands.pvAssocQuality[i]
+        ])
+        particle_list = np.array(particle_list)
 
         # eventi = [particle_list,genmet_list]
         npz_file='/hildafs/projects/phy230010p/fep/deepmetv2/data_znunu/'+dataset+'/raw/'+dataset+'_file'+str(currentfile)+'_slice_'+str(i)+'_nevent_'+str(len(events_slice))
