@@ -47,29 +47,25 @@ class Net(nn.Module):
         return torch.sigmoid(weights)
 
 def loss_fn(weights, prediction, truth, batch):
-    print('prediction:', prediction.shape)
-    print('truth', truth.shape)
+    # print('prediction:', prediction.shape)
+    # print('truth', truth.shape)
     px=prediction[:,0]
     py=prediction[:,1]
     true_px=truth[:,0] 
     true_py=truth[:,1]
-    print('truepx:', true_px.shape, 'px:', px.shape)
-    print('truepy:', true_py.shape, 'py:', py.shape)
+    # print('truepx:', true_px.shape, 'px:', px.shape)
+    # print('truepy:', true_py.shape, 'py:', py.shape)
     #print('HT', truth[:,10])
-    print(weights.shape)
-    print(batch.shape)
-    print('batch:', batch)
+    # print(weights.shape)
+    # print(batch.shape)
+    # print('batch:', batch)
     METx = scatter_add(weights*px, batch)
     METy = scatter_add(weights*py, batch)
-    # METx = torch.reshape(METx, (METx.shape[0],1))
-    # METy = torch.reshape(METy, (METy.shape[0],1))
     print('METx:', METx.shape)
     print('METy:', METy.shape)
     #tzero = torch.zeros(prediction.shape[0]).to('cuda')
     #BCE = nn.BCELoss()
     #prediction[:,]: pX,pY,pT,eta,d0,dz,mass,puppiWeight,pdgId,charge,fromPV
-
-    print(METx + true_px)
     loss=0.5*( ( METx + true_px)**2 + ( METy + true_py)**2 ).mean() 
     #+ 5000*BCE(torch.where(prediction[:,9]==0, tzero, weights), torch.where(prediction[:,9]==0, tzero, prediction[:,7]))
     return loss

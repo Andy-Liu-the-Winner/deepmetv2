@@ -66,7 +66,7 @@ class METDataset(Dataset):
             # print('existing processed:', self.existing_pt_names)
             rawfile = raw_path.split('/')[-1]
             # print('raw file:', rawfile)
-            npzfile = np.load(raw_path,allow_pickle=True)#file contains one event
+            npzfile = np.load(raw_path,allow_pickle=True)
             for ievt in range(np.shape(npzfile['x'])[1]):
                 print(rawfile, ievt)
                 if rawfile.replace('.npz','_'+str(ievt)+'.pt') in self.existing_pt_names:

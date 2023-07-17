@@ -38,7 +38,6 @@ def train(model, device, optimizer, scheduler, loss_fn, dataloader, epoch):
     with tqdm(total=len(dataloader)) as t:
         for data in dataloader:
             print("data:",data)
-            print("dataloader:", dataloader)
             optimizer.zero_grad()
             data = data.to(device)
             x_cont = data.x[:,:8] #include puppi
@@ -49,9 +48,6 @@ def train(model, device, optimizer, scheduler, loss_fn, dataloader, epoch):
             # NB: there is a problem right now for comparing hits at the +/- pi boundary
             edge_index = radius_graph(etaphi, r=deltaR, batch=data.batch, loop=True, max_num_neighbors=255)
             result = model(x_cont, x_cat, edge_index, data.batch)
-            print('training result:')
-            print(result)
-            print(result.shape)
             loss = loss_fn(result, data.x, data.y, data.batch)
             loss.backward()
             optimizer.step()
