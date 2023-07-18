@@ -5,6 +5,7 @@ import os.path as osp
 
 # External imports
 import numpy as np
+import time
 from optparse import OptionParser
 import torch
 from tqdm import tqdm
@@ -106,11 +107,15 @@ class METDataset(Dataset):
                 print('saving...')
                 torch.save(outdata, osp.join(self.processed_dir,(raw_path.replace('.npz','_'+str(ievt)+'.pt')).split('/')[-1] ))
 
-def conversion(rawfile, pt_files):
-    npzfile = np.load(rawfile,allow_pickle=True)
+def conversion(rawpath, existing_pt_files, processed_dir):
+    rawfile = rawpath.split('/')[-1]
+    print("processing", rawfile)
+    npzfile = np.load(rawpath,allow_pickle=True)
+    print("file loaded")
     for ievt in range(np.shape(npzfile['x'])[1]):#file contains one event
+        tic = time.time()
         print(rawfile, ievt)
-        if rawfile.replace('.npz','_'+str(ievt)+'.pt') in pt_files:
+        if rawfile.replace('.npz','_'+str(ievt)+'.pt') in existing_pt_files:
             print('already processed')
             continue
         else:
@@ -139,7 +144,12 @@ def conversion(rawfile, pt_files):
                         edge_index=edge_index,
                         y=torch.from_numpy(y))
         print('saving...')
-        torch.save(outdata, osp.join(self.processed_dir,(raw_path.replace('.npz','_'+str(ievt)+'.pt')).split('/')[-1] ))
+        try: torch.save(outdata, osp.join(processed_dir,(rawpath.replace('.npz','_'+str(ievt)+'.pt')).split('/')[-1] ))
+        except: print('failed to save')
+        print('saved')
+        toc = time.time()
+        print("time elapsed:", toc-tic)
+    
 
 if __name__ == '__main__':
     parser = OptionParser()
@@ -150,19 +160,18 @@ if __name__ == '__main__':
 
     raw_paths = sorted(glob.glob(os.environ['PWD']+'/'+dataset+'/raw/*.npz'))
     npz_files = [f.split('/')[-1] for f in raw_paths]
+    npz_files = [np.load(f,allow_pickle=True) for f in raw_paths]
     processed_dir = os.environ['PWD']+'/'+dataset+'/processed'
-    pt_files = sorted(glob.glob(processed_dir+'/*_file*_slice_*_nevent_*.pt'))
-    pt_files = [f.split('/')[-1] for f in pt_files] 
+    existing_pt_files = sorted(glob.glob(processed_dir+'/*_file*_slice_*_nevent_*.pt'))
+    existing_pt_files = [f.split('/')[-1] for f in existing_pt_files] 
     #print(raw_paths)
     for idx,raw_path in enumerate(tqdm(raw_paths)):
         raw_file = raw_path.split('/')[-1]
         npz_file = np.load(raw_path,allow_pickle=True)
-        
-
     with concurrent.futures.ProcessPoolExecutor(max_workers=nworkers) as executor:
         futures = set()
 
-        futures.update(executor.submit(conversion, file, pt_files) for file in npz_files)
+        futures.update(executor.submit(conversion, rawpath, existing_pt_files, processed_dir) for rawpath in raw_paths)
 
         try:
             total = len(futures)

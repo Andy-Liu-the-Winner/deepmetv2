@@ -62,46 +62,46 @@ class METDataset(Dataset):
         data = torch.load(self.processed_files[idx])
         return data
     
-    def process(self):
-        print('processing raw data...')
-        #convert the npz into pytorch tensors and save them
-        path = self.processed_dir
-        for idx,raw_path in enumerate(tqdm(self.raw_paths)):
-            # print('raw path:', raw_path)
-            rawfile = raw_path.split('/')[-1]
-            # print('raw file:', rawfile)
-            npzfile = np.load(raw_path,allow_pickle=True)
-            for ievt in range(np.shape(npzfile['x'])[1]):
-                if rawfile.replace('.npz','_'+str(ievt)+'.pt') in self.existing_pt_names:
-                    print('already processed')
-                    continue
-                else:
-                    print('Processing file', rawfile)
-                print(rawfile, ievt)
-                inputs = np.array(npzfile['x'][:,ievt,:]).astype(np.float32)
-                print('inputs shape:', inputs.shape)
-                #original: pt, eta, phi, d0, dz, mass, puppiWeight, pdgid, charge, frompv, pvref, pvAssocQuality
-                inputs=inputs.T 
-                #now: pX,pY,pT,eta,d0,dz,mass,puppiWeight,pdgId,charge,fromPV
-                x = inputs[:,3:10]
-                x=np.insert(x,0, inputs[:,0]*np.cos(inputs[:,2]),axis=1)
-                x=np.insert(x,1, inputs[:,0]*np.sin(inputs[:,2]),axis=1)
-                x=np.insert(x,2, inputs[:,0],axis=1)
-                x=np.insert(x,3, inputs[:,1],axis=1)
-                boolean = x[:,8]!=-999
-                x=x[x[:,8]!=-999]
-                x=x[x[:,9]!=-999]
-                x = np.nan_to_num(x)
-                x = np.clip(x, -5000., 5000.)
-                assert not np.any(np.isnan(x))
-                edge_index = torch.empty((2,0), dtype=torch.long)
-                y = (np.array(npzfile['y'][:]).astype(np.float32)[None])
-                #print(y)
-                outdata = Data(x=torch.from_numpy(x),
-                                edge_index=edge_index,
-                                y=torch.from_numpy(y))
-                print('saving...')
-                torch.save(outdata, osp.join(self.processed_dir,(raw_path.replace('.npz','_'+str(ievt)+'.pt')).split('/')[-1] ))
+    # def process(self):
+    #     print('processing raw data...')
+    #     #convert the npz into pytorch tensors and save them
+    #     path = self.processed_dir
+    #     for idx,raw_path in enumerate(tqdm(self.raw_paths)):
+    #         # print('raw path:', raw_path)
+    #         rawfile = raw_path.split('/')[-1]
+    #         # print('raw file:', rawfile)
+    #         npzfile = np.load(raw_path,allow_pickle=True)
+    #         for ievt in range(np.shape(npzfile['x'])[1]):
+    #             if rawfile.replace('.npz','_'+str(ievt)+'.pt') in self.existing_pt_names:
+    #                 print('already processed')
+    #                 continue
+    #             else:
+    #                 print('Processing file', rawfile)
+    #             print(rawfile, ievt)
+    #             inputs = np.array(npzfile['x'][:,ievt,:]).astype(np.float32)
+    #             print('inputs shape:', inputs.shape)
+    #             #original: pt, eta, phi, d0, dz, mass, puppiWeight, pdgid, charge, frompv, pvref, pvAssocQuality
+    #             inputs=inputs.T 
+    #             #now: pX,pY,pT,eta,d0,dz,mass,puppiWeight,pdgId,charge,fromPV
+    #             x = inputs[:,3:10]
+    #             x=np.insert(x,0, inputs[:,0]*np.cos(inputs[:,2]),axis=1)
+    #             x=np.insert(x,1, inputs[:,0]*np.sin(inputs[:,2]),axis=1)
+    #             x=np.insert(x,2, inputs[:,0],axis=1)
+    #             x=np.insert(x,3, inputs[:,1],axis=1)
+    #             boolean = x[:,8]!=-999
+    #             x=x[x[:,8]!=-999]
+    #             x=x[x[:,9]!=-999]
+    #             x = np.nan_to_num(x)
+    #             x = np.clip(x, -5000., 5000.)
+    #             assert not np.any(np.isnan(x))
+    #             edge_index = torch.empty((2,0), dtype=torch.long)
+    #             y = (np.array(npzfile['y'][:]).astype(np.float32)[None])
+    #             #print(y)
+    #             outdata = Data(x=torch.from_numpy(x),
+    #                             edge_index=edge_index,
+    #                             y=torch.from_numpy(y))
+    #             print('saving...')
+    #             torch.save(outdata, osp.join(self.processed_dir,(raw_path.replace('.npz','_'+str(ievt)+'.pt')).split('/')[-1] ))
 
 def fetch_dataloader(data_dir, batch_size, validation_split):
     transform = T.Cartesian(cat=False)

@@ -5,6 +5,7 @@ import os.path as osp
 
 # External imports
 import numpy as np
+import time
 from optparse import OptionParser
 import torch
 from tqdm import tqdm
@@ -68,6 +69,7 @@ class METDataset(Dataset):
             # print('raw file:', rawfile)
             npzfile = np.load(raw_path,allow_pickle=True)
             for ievt in range(np.shape(npzfile['x'])[1]):
+                tic = time.time()
                 print(rawfile, ievt)
                 if rawfile.replace('.npz','_'+str(ievt)+'.pt') in self.existing_pt_names:
                     print('already processed')
@@ -99,6 +101,8 @@ class METDataset(Dataset):
                                 y=torch.from_numpy(y))
                 print('saving...')
                 torch.save(outdata, osp.join(self.processed_dir,(raw_path.replace('.npz','_'+str(ievt)+'.pt')).split('/')[-1] ))
+                toc = time.time()
+                print('time:', toc-tic)
 
 if __name__ == '__main__':
     parser = OptionParser()
