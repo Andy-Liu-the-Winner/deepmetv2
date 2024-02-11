@@ -1,5 +1,5 @@
 from coffea.nanoevents import NanoEventsFactory
-from coffea.nanoevents.schemas import NanoAODSchema,BaseSchema
+from coffea.nanoevents.schemas import PFNanoAODSchema,NanoAODSchema,BaseSchema
 import numpy as np
 import os
 from optparse import OptionParser
@@ -20,6 +20,7 @@ def multidict_tojson(filepath, indict):
 
 def future_savez(i, tot):
         #tic=time.time()
+        print('processing slice ',i)
         genmet_list = np.column_stack([
                 events_slice.GenMET.pt * np.cos(events_slice.GenMET.phi),
                 events_slice.GenMET.pt * np.sin(events_slice.GenMET.phi),
@@ -33,26 +34,45 @@ def future_savez(i, tot):
                 events_slice.DeepMETResolutionTune.pt * np.sin(events_slice.DeepMETResolutionTune.phi),
                 events_slice.LHE.HT
         ])
+        print("arraying genmet_list")
         genmet_list = np.array(genmet_list)
+        # print(type(events_slice.PFCands.eta), len(events_slice.PFCands.eta),events_slice.PFCands.eta)
+        # print(type(events_slice.PFCands.pt), len(events_slice.PFCands.pt),events_slice.PFCands.pt)
+        # print(type(events_slice.PFCands.phi), len(events_slice.PFCands.phi),events_slice.PFCands.phi)
+        # print(type(events_slice.PFCands.d0), len(events_slice.PFCands.d0),events_slice.PFCands.d0)
+        # print(type(events_slice.PFCands.dz), len(events_slice.PFCands.dz),events_slice.PFCands.dz)
+        # print(type(events_slice.PFCands.mass), len(events_slice.PFCands.mass),events_slice.PFCands.mass)
+        # print(type(events_slice.PFCands.puppiWeight), len(events_slice.PFCands.puppiWeight),events_slice.PFCands.puppiWeight)
+        # print(type(events_slice.PFCands.pdgId), len(events_slice.PFCands.pdgId),events_slice.PFCands.pdgId)
+        # print(type(events_slice.PFCands.charge), len(events_slice.PFCands.charge),events_slice.PFCands.charge)
+        # print(type(events_slice.PFCands.pvAssocQuality), len(events_slice.PFCands.pvAssocQuality),events_slice.PFCands.pvAssocQuality)
+        testarray = np.full((10,len(events_slice),nparticles_per_event),-999, dtype='float32')
+        testslice = ak.Array(np.full((1, 1000), 100, dtype='float32'))
+    
+        testarray[0] = ak.fill_none(ak.pad_none(testslice, nparticles_per_event,clip=True),-999)
 
-        particle_list = np.full((12,len(events_slice),nparticles_per_event),-999, dtype='float32')
+        print("arraying particle_list")
+
+        particle_list = np.full((11,len(events_slice),nparticles_per_event),-999, dtype='float32')
         particle_list[0] = ak.fill_none(ak.pad_none(events_slice.PFCands.pt, nparticles_per_event,clip=True),-999)
-        particle_list[1] = ak.fill_none(ak.pad_none(events_slice.PFCands.eta, nparticles_per_event,clip=True),-999)          
-        particle_list[2] = ak.fill_none(ak.pad_none(events_slice.PFCands.phi, nparticles_per_event,clip=True),-999)          
-        particle_list[3] = ak.fill_none(ak.pad_none(events_slice.PFCands.d0, nparticles_per_event,clip=True),-999)           
-        particle_list[4] = ak.fill_none(ak.pad_none(events_slice.PFCands.dz, nparticles_per_event,clip=True),-999)           
-        particle_list[5] = ak.fill_none(ak.pad_none(events_slice.PFCands.mass, nparticles_per_event,clip=True),-999)         
-        particle_list[6] = ak.fill_none(ak.pad_none(events_slice.PFCands.puppiWeight, nparticles_per_event,clip=True),-999) 
-        particle_list[7] = ak.fill_none(ak.pad_none(events_slice.PFCands.pdgId, nparticles_per_event,clip=True),-999)        
-        particle_list[8] = ak.fill_none(ak.pad_none(events_slice.PFCands.charge, nparticles_per_event,clip=True),-999)        
-        particle_list[9] = ak.fill_none(ak.pad_none(events_slice.PFCands.fromPV, nparticles_per_event,clip=True),-999) 
-        particle_list[10] = ak.fill_none(ak.pad_none(events_slice.PFCands.pvRef, nparticles_per_event,clip=True),-999)         
-        particle_list[11] = ak.fill_none(ak.pad_none(events_slice.PFCands.pvAssocQuality, nparticles_per_event,clip=True),-999)
+        particle_list[1] = ak.fill_none(ak.pad_none(events_slice.PFCands.eta, nparticles_per_event,clip=True),-999) 
+        particle_list[2] = ak.fill_none(ak.pad_none(events_slice.PFCands.phi, nparticles_per_event,clip=True),-999) 
+        particle_list[3] = ak.fill_none(ak.pad_none(events_slice.PFCands.d0, nparticles_per_event,clip=True),-999)    
+        particle_list[4] = ak.fill_none(ak.pad_none(events_slice.PFCands.dz, nparticles_per_event,clip=True),-999)   
+        particle_list[5] = ak.fill_none(ak.pad_none(events_slice.PFCands.mass, nparticles_per_event,clip=True),-999) 
+        particle_list[6] = ak.fill_none(ak.pad_none(events_slice.PFCands.puppiWeight, nparticles_per_event,clip=True),-999)
+        particle_list[7] = ak.fill_none(ak.pad_none(events_slice.PFCands.pdgId, nparticles_per_event,clip=True),-999)   
+        particle_list[8] = ak.fill_none(ak.pad_none(events_slice.PFCands.charge, nparticles_per_event,clip=True),-999)
+        particle_list[9] = ak.fill_none(ak.pad_none(events_slice.PFCands.fromPV, nparticles_per_event,clip=True),-999)
+        # particle_list[10] = ak.fill_none(ak.pad_none(events_slice.PFCands.pvRef, nparticles_per_event,clip=True),-999) Removed for Run 3        
+        particle_list[10] = ak.fill_none(ak.pad_none(events_slice.PFCands.pvAssocQuality, nparticles_per_event,clip=True),-999)
 
 
         # eventi = [particle_list,genmet_list]
+        print("saving npz file")
         npz_file='/hildafs/projects/phy230010p/fep/DeepMETv2/data_znunu/'+dataset+'/raw/'+dataset+'_file'+str(currentfile)+'_slice_'+str(i)+'_nevent_'+str(len(events_slice))
         np.savez(npz_file,x=particle_list,y=genmet_list) 
+        print("saved to ",npz_file)
 
         #toc=time.time()
         #print(toc-tic)
@@ -69,10 +89,10 @@ if __name__ == '__main__':
         datasetsname = {
             "znunu100to200": ['Znunu/ZJetsToNuNu_HT-100To200_TuneCP5_13TeV-madgraphMLM-pythia8/'],
             "znunu200to400": ['Znunu/ZJetsToNuNu_HT-200To400_TuneCP5_13TeV-madgraphMLM-pythia8/'],
-            "znunu400to600": ['Znunu/ZJetsToNuNu_HT-400To600_TuneCP5_13TeV-madgraphMLM-pythia8/'],
-            "znunu600to800": ['Znunu/ZJetsToNuNu_HT-600To800_TuneCP5_13TeV-madgraphMLM-pythia8/'],
-            "znunu800to1200":[ 'Znunu/ZJetsToNuNu_HT-800To1200_TuneCP5_13TeV-madgraphMLM-pythia8/'],
-            "znunu1200to2500": ['Znunu/ZJetsToNuNu_HT-1200To2500_TuneCP5_13TeV-madgraphMLM-pythia8/'],
+            "znunu400to800": ['Znunu/ZJetsToNuNu_HT-400To800_TuneCP5_13TeV-madgraphMLM-pythia8/'],
+            "znunu800to1500": ['Znunu/ZJetsToNuNu_HT-800To1500_TuneCP5_13TeV-madgraphMLM-pythia8/'],
+            "znunu1500to2500":[ 'Znunu/ZJetsToNuNu_HT-800To1200_TuneCP5_13TeV-madgraphMLM-pythia8/'],
+            "znunu2500": ['Znunu/ZJetsToNuNu_HT-1200To2500_TuneCP5_13TeV-madgraphMLM-pythia8/'],
             "znunu2500toInf": ['Znunu/ZJetsToNuNu_HT-2500ToInf_TuneCP5_13TeV-madgraphMLM-pythia8/'],
         }
 

@@ -49,7 +49,7 @@ def conversion(rawpath, existing_pt_files, processed_dir):
         x = np.clip(x, -5000., 5000.)
         assert not np.any(np.isnan(x))
         edge_index = torch.empty((2,0), dtype=torch.long)
-        y = (np.array(npzfile['y'][:]).astype(np.float32)[None])
+        y = (np.array(npzfile['y'][ievt,:]).astype(np.float32)[None])
         #print(y)
         outdata = Data(x=torch.from_numpy(x),
                         edge_index=edge_index,
@@ -65,20 +65,36 @@ def conversion(rawpath, existing_pt_files, processed_dir):
 if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option('-d', '--dataset', help='dataset', dest='dataset')
+    parser.add_option('-n', '--nworkers', help='number of workers', dest='nworkers', default=4)
+    parser.add_option('-e', '--events', help='number of events', dest='nevents', default=None)
     (options, args) = parser.parse_args()
     dataset = options.dataset
-    nworkers = 4
+    nevents = options.nevents
+    nworkers = options.nworkers
 
-    raw_paths = sorted(glob.glob(os.environ['PWD']+'/'+dataset+'/raw/*.npz'))
-    npz_files = [f.split('/')[-1] for f in raw_paths]
-    npz_files = [np.load(f,allow_pickle=True) for f in raw_paths]
-    processed_dir = os.environ['PWD']+'/'+dataset+'/processed'
-    existing_pt_files = sorted(glob.glob(processed_dir+'/*_file*_slice_*_nevent_*.pt'))
-    existing_pt_files = [f.split('/')[-1] for f in existing_pt_files] 
+    raw_paths = sorted(glob.glob(os.environ['PWD']+'/'+dataset+'/raw/*.npz')) #Finding all the raw files
+    npz_files = [f.split('/')[-1] for f in raw_paths] #Getting the names of the raw files
+    npz_files = [np.load(f,allow_pickle=True) for f in raw_paths] #Loading the raw files
+    processed_dir = os.environ['PWD']+'/'+dataset+'/processed' #Setting the processed directory for saving pt files
+    existing_pt_files = sorted(glob.glob(processed_dir+'/*_file*_slice_*_nevent_*.pt')) #Finding all the existing pt files
+    existing_pt_files = [f.split('/')[-1] for f in existing_pt_files] #Getting the names of the existing pt files
     #print(raw_paths)
     for idx,raw_path in enumerate(tqdm(raw_paths)):
         raw_file = raw_path.split('/')[-1]
         npz_file = np.load(raw_path,allow_pickle=True)
+        print(np.shape(npz_file['x']))
+    if nevents is not None:
+        events = 0
+        raw_paths_temp = raw_paths
+        raw_paths = []
+        index = 0
+        while events < int(nevents):
+            raw_path = raw_paths_temp[index]
+            events += np.shape(np.load(raw_path,allow_pickle=True)['x'])[1]
+            raw_paths.append(raw_path)
+            index += 1
+            print(np.shape(np.load(raw_path,allow_pickle=True)['x'])[1], events, len(raw_paths), index)
+            
     with concurrent.futures.ProcessPoolExecutor(max_workers=nworkers) as executor:
         futures = set()
 

@@ -94,7 +94,7 @@ class METDataset(Dataset):
                 x = np.clip(x, -5000., 5000.)
                 assert not np.any(np.isnan(x))
                 edge_index = torch.empty((2,0), dtype=torch.long)
-                y = (np.array(npzfile['y'][:]).astype(np.float32)[None])
+                y = (np.array(npzfile['y'][ievt,:]).astype(np.float32)[None])
                 #print(y)
                 outdata = Data(x=torch.from_numpy(x),
                                 edge_index=edge_index,
