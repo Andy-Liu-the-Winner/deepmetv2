@@ -65,7 +65,7 @@ def future_savez(dataset,currentfile):
     temp = events_slice[:]
     
     tightMuonMask = ((events_slice.Muon.tightId == 1) & ( events_slice.Muon.pfRelIso03_all < 0.15) & (events_slice.Muon.pt > 20.))
-    tightElectronMask = ((events_slice.Electron.mvaFall17V1Iso_WP80 == 1) & (events_slice.Electron.pt > 20.0))
+    tightElectronMask = ((events_slice.Electron.mvaIso_WP80 == 1) & (events_slice.Electron.pt > 20.0))
    
     events_slice['istightMuon'] = tightMuonMask
     events_slice['istightElectron'] = tightElectronMask
@@ -73,10 +73,17 @@ def future_savez(dataset,currentfile):
     events_slice['Muon'] = events_slice.Muon[events_slice.istightMuon]
     events_slice['Electron'] = events_slice.Electron[events_slice.istightElectron]
         
+    print(events_slice['Muon'])
 
     n_tight_leptons = ak.count(events_slice.Muon.pt,axis=-1) + ak.count(events_slice.Electron.pt,axis=-1)
     select_events_mask = n_tight_leptons >= options.n_leptons
     selected_events = events_slice[select_events_mask]
+
+    tightMuonMask = ((selected_events.Muon.tightId == 1) & (selected_events.Muon.pfRelIso03_all < 0.15) & (selected_events.Muon.pt > 20.))
+    selected_events['istightMuon'] = tightMuonMask
+
+    tightElectronMask = ((selected_events.Electron.mvaIso_WP80 == 1) & (selected_events.Electron.pt > 20.0))
+    selected_events['istightElectron'] = tightElectronMask
 
     muons = selected_events.Muon[selected_events.istightMuon]
     electrons = selected_events.Electron[selected_events.istightElectron]
@@ -126,7 +133,7 @@ def future_savez(dataset,currentfile):
     
     
     #save the rest of PFcandidates 
-    particle_list = np.full((12,len(selected_events),nparticles_per_event),-999, dtype='float32')
+    particle_list = np.full((11,len(selected_events),nparticles_per_event),-999, dtype='float32')
     particle_list[0]= ak.fill_none(ak.pad_none(selected_events.PFCands.pt, nparticles_per_event,clip=True),-999)
     particle_list[1]= ak.fill_none(ak.pad_none(selected_events.PFCands.eta, nparticles_per_event,clip=True),-999)
     particle_list[2]= ak.fill_none(ak.pad_none(selected_events.PFCands.phi, nparticles_per_event,clip=True),-999)
@@ -137,15 +144,15 @@ def future_savez(dataset,currentfile):
     particle_list[7]= ak.fill_none(ak.pad_none(selected_events.PFCands.pdgId, nparticles_per_event,clip=True),-999)
     particle_list[8]= ak.fill_none(ak.pad_none(selected_events.PFCands.charge, nparticles_per_event,clip=True),-999)
     particle_list[9]= ak.fill_none(ak.pad_none(selected_events.PFCands.fromPV, nparticles_per_event,clip=True),-999)
-    particle_list[10]= ak.fill_none(ak.pad_none(selected_events.PFCands.pvRef, nparticles_per_event,clip=True),-999)
-    particle_list[11]= ak.fill_none(ak.pad_none(selected_events.PFCands.pvAssocQuality, nparticles_per_event,clip=True),-999)
+    # particle_list[10]= ak.fill_none(ak.pad_none(selected_events.PFCands.pvRef, nparticles_per_event,clip=True),-999)
+    particle_list[10]= ak.fill_none(ak.pad_none(selected_events.PFCands.pvAssocQuality, nparticles_per_event,clip=True),-999)
     
    
     
     print("saving")
     
     
-    npz_file='/hildafs/projects/phy230010p/fep/deepmetv2/data_dytt/'+dataset+'/raw/'+dataset+'_file'+str(currentfile)+'_slice_'+str(i)+'_nevent_'+str(len(selected_events))
+    npz_file='/hildafs/projects/phy230010p/fep/DeepMETv2/data_dytt/'+dataset+'/raw/'+dataset+'_file'+str(currentfile)+'_slice_'+str(i)+'_nevent_'+str(len(selected_events))
     
     #,y=met_list
     #print("met_list:", met_list.shape)
@@ -178,6 +185,7 @@ if __name__ == '__main__':
 
         datasetsname = {
             "dy",
+            "dyold",
             "tt"
         }
 
