@@ -85,6 +85,7 @@ if __name__ == '__main__':
         parser.add_option('-d', '--dataset', help='dataset', dest='dataset')
         parser.add_option('-s', '--startfile',type=int, default=0, help='startfile')
         parser.add_option('-e', '--endfile',type=int, default=1, help='endfile')
+        parser.add_option('-n', '--nevents', help='number of events', dest='eventsmax', default=50000)
         (options, args) = parser.parse_args()
         datasetsname = {
             "znunu100to200": ['Znunu/ZJetsToNuNu_HT-100To200_TuneCP5_13TeV-madgraphMLM-pythia8/'],
@@ -119,11 +120,13 @@ if __name__ == '__main__':
         inpz=0
         eventperfile=1000
         currentfile=0
+        eventsmax = int(options.eventsmax)
+        eventsconverted=0
         for ifile in file_names:
             if currentfile<options.startfile:
                 currentfile+=1
                 continue
-            events = NanoEventsFactory.from_root(ifile, schemaclass=NanoAODSchema).events()
+            events = NanoEventsFactory.from_root(ifile, schemaclass=PFNanoAODSchema).events()
             nevents_total = len(events)
             print(ifile, ' Number of events:', nevents_total)
             
@@ -131,9 +134,11 @@ if __name__ == '__main__':
                 if i< int(nevents_total / eventperfile):
                     print('from ',i*eventperfile, ' to ', (i+1)*eventperfile)
                     events_slice = events[i*eventperfile:(i+1)*eventperfile]
+                    eventsconverted+=(i+1)*eventperfile-i*eventperfile
                 elif i == int(nevents_total / eventperfile) and i*eventperfile<=nevents_total:
                     print('from ',i*eventperfile, ' to ', nevents_total)
                     events_slice = events[i*eventperfile:nevents_total]
+                    eventsconverted+=nevents_total-i*eventperfile
                 else:
                     print(' weird ... ')
 
@@ -143,6 +148,9 @@ if __name__ == '__main__':
                 future_savez(i, nevents_total) 
                 toc=time.time()
                 print('time:',toc-tic)
+                if eventsconverted>=eventsmax:
+                    print('=================> converted ',eventsconverted, ' events')
+                    exit()
             currentfile+=1
             if currentfile>=options.endfile:
                 print('=================> finished ')
