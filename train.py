@@ -25,9 +25,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--restore_file', default=None,
                     help="Optional, name of the file in --model_dir containing weights to reload before \
                     training")  # 'best' or 'train'
-parser.add_argument('--data', default='data',
+parser.add_argument('--data', default='/hildafs/projects/phy230010p/fep/DeepMETv2/data_znunu/training/',
                     help="Name of the data folder")
-parser.add_argument('--ckpts', default='ckpts',
+parser.add_argument('--ckpts', default='/hildafs/projects/phy230010p/fep/DeepMETv2/ckpts_znunu/',
                     help="Name of the ckpts folder")
 
 
@@ -46,7 +46,7 @@ def train(model, device, optimizer, scheduler, loss_fn, dataloader, epoch):
             phi = torch.atan2(data.x[:,1], data.x[:,0])
             etaphi = torch.cat([data.x[:,3][:,None], phi[:,None]], dim=1)        
             # NB: there is a problem right now for comparing hits at the +/- pi boundary
-            edge_index = radius_graph(etaphi, r=deltaR, batch=data.batch, loop=True, max_num_neighbors=255)
+            edge_index = radius_graph(etaphi, r=deltaR, batch=data.batch, loop=False, max_num_neighbors=255)
             result = model(x_cont, x_cat, edge_index, data.batch)
             loss = loss_fn(result, data.x, data.y, data.batch)
             loss.backward()
@@ -64,8 +64,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     dataloaders = data_loader.fetch_dataloader(data_dir=args.data, 
-                                               batch_size=6,
-                                               validation_split=.2)
+                                               batch_size=64,
+                                               validation_split=.25)
     
     train_dl = dataloaders['train']
     test_dl = dataloaders['test']
@@ -75,8 +75,8 @@ if __name__ == '__main__':
     model = net.Net(8, 3).to(device) #include puppi
     print('model initialized')
     #model = net.Net(7, 3).to(device) #remove puppi
-    optimizer = torch.optim.AdamW(model.parameters(),lr=0.001)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=500, threshold=0.05)
+    optimizer = torch.optim.AdamW(model.parameters(),lr=0.0001, weight_decay=0.001)
+    scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.0001, max_lr=0.01, cycle_momentum=False)
     first_epoch = 0
     best_validation_loss = 10e7
     deltaR = 0.4
