@@ -176,6 +176,7 @@ if __name__ == '__main__':
                           help='How many leptons are required in the events', default=2)
         parser.add_option('--n_leptons_subtract', dest='n_leptons_subtract',
                           help='How many leptons to be subtracted from the Candidates list. Can not be larger than the n_leptons', default=2)
+        parser.add_option('--nevents', help='number of events to convert', dest='eventsmax', default=300000)
         (options, args) = parser.parse_args()
 
         
@@ -204,6 +205,8 @@ if __name__ == '__main__':
         inpz=0
         eventperfile=5000
         currentfile=0
+        eventsmax = int(options.eventsmax)
+        eventsconverted=0
         for file in file_names:
             if currentfile<options.startfile:
                 currentfile+=1
@@ -226,6 +229,9 @@ if __name__ == '__main__':
                 future_savez(dataset,currentfile)
                 toc=time.time()
                 print('time:',toc-tic)
+                if eventsconverted>=eventsmax:
+                    print('=================> finished ')
+                    exit()
             currentfile+=1
             if currentfile>=options.endfile:
                 print('=================> finished ')
