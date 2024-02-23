@@ -38,24 +38,28 @@ resolutions_arr = {
 }
 for key in resolutions_arr:
          plt.figure(1)
-         xx = a[key]['u_perp_resolution'][1][0:20]
-         yy = a[key]['u_perp_resolution'][0]
+         print(a[key]['u_perp_resolution'][1])
+         print(a[key]['u_perp_resolution'][0])
+         xx = a[key]['u_perp_resolution'][1][0:40]
+         print(xx.shape)
+         yy = a[key]['u_perp_resolution'][0][0:40]
+         print(yy.shape)
          plt.plot(xx, yy,color=colors[key], label=label_arr[key])
          plt.figure(2)
-         xx = a[key]['u_perp_scaled_resolution'][1][0:20]
-         yy = a[key]['u_perp_scaled_resolution'][0]
+         xx = a[key]['u_perp_scaled_resolution'][1][0:40]
+         yy = a[key]['u_perp_scaled_resolution'][0][0:40]
          plt.plot(xx, yy,color=colors[key], label=label_arr[key])
          plt.figure(3)
-         xx = a[key]['u_par_resolution'][1][0:20]
-         yy = a[key]['u_par_resolution'][0]
+         xx = a[key]['u_par_resolution'][1][0:40]
+         yy = a[key]['u_par_resolution'][0][0:40]
          plt.plot(xx, yy,color=colors[key], label=label_arr[key])
          plt.figure(4)
-         xx = a[key]['u_par_scaled_resolution'][1][0:20]
-         yy = a[key]['u_par_scaled_resolution'][0]
+         xx = a[key]['u_par_scaled_resolution'][1][0:40]
+         yy = a[key]['u_par_scaled_resolution'][0][0:40]
          plt.plot(xx, yy,color=colors[key], label=label_arr[key])
          plt.figure(5)
-         xx = a[key]['R'][1][0:20]
-         yy = a[key]['R'][0]
+         xx = a[key]['R'][1][0:40]
+         yy = a[key]['R'][0][0:40]
          plt.plot(xx, yy,color=colors[key], label=label_arr[key])
 
 if(True):

@@ -85,7 +85,7 @@ if __name__ == '__main__':
         parser.add_option('-d', '--dataset', help='dataset', dest='dataset')
         parser.add_option('-s', '--startfile',type=int, default=0, help='startfile')
         parser.add_option('-e', '--endfile',type=int, default=1, help='endfile')
-        parser.add_option('-n', '--nevents', help='number of events', dest='eventsmax', default=50000)
+        parser.add_option('-n', '--nevents', help='number of events', dest='eventsmax', default=500000)
         (options, args) = parser.parse_args()
         datasetsname = {
             "znunu100to200": ['Znunu/ZJetsToNuNu_HT-100To200_TuneCP5_13TeV-madgraphMLM-pythia8/'],
