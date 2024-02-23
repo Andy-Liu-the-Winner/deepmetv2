@@ -69,7 +69,7 @@ if __name__ == '__main__':
     parser.add_option('-e', '--events', help='number of events', dest='nevents', default=None)
     (options, args) = parser.parse_args()
     dataset = options.dataset
-    nevents = options.nevents
+    nevents = int(options.nevents)
     nworkers = int(options.nworkers)
 
     raw_paths = sorted(glob.glob(os.environ['PWD']+'/'+dataset+'/raw/*.npz')) #Finding all the raw files
@@ -87,12 +87,13 @@ if __name__ == '__main__':
         events = 0
         raw_paths_temp = raw_paths
         raw_paths = []
-        index = 0
-        while events < int(nevents):
+        generator = np.random.default_rng()
+        while events < nevents:
+            index = generator.integers(0, len(raw_paths_temp), size=1)[0]
             raw_path = raw_paths_temp[index]
+            raw_paths_temp.remove(raw_path)
             events += np.shape(np.load(raw_path,allow_pickle=True)['x'])[1]
             raw_paths.append(raw_path)
-            index += 1
             print(np.shape(np.load(raw_path,allow_pickle=True)['x'])[1], events, len(raw_paths), index)
             
     with concurrent.futures.ProcessPoolExecutor(max_workers=nworkers) as executor:
