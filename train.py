@@ -71,7 +71,7 @@ if __name__ == '__main__':
     test_dl = dataloaders['test']
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(device)    
+    print(device)      
     model = net.Net(8, 3).to(device) #include puppi
     print('model initialized')
     #model = net.Net(7, 3).to(device) #remove puppi
@@ -86,10 +86,10 @@ if __name__ == '__main__':
     metrics = net.metrics
 
     model_dir = args.ckpts
-    loss_log = open(model_dir+'/loss.log', 'w')
-    loss_log.write('# loss log for training starting in '+strftime("%Y-%m-%d %H:%M:%S", gmtime()) + '\n')
-    loss_log.write('epoch, loss, val_loss\n')
-    loss_log.flush()
+    # loss_log = open(model_dir+'/loss.log', 'w')
+    # loss_log.write('# loss log for training starting in '+strftime("%Y-%m-%d %H:%M:%S", gmtime()) + '\n')
+    # loss_log.write('epoch, loss, val_loss\n')
+    # loss_log.flush()
 
     # reload weights from restore_file if specified
     if args.restore_file is not None:
@@ -99,6 +99,14 @@ if __name__ == '__main__':
         print('Restarting training from epoch',first_epoch)
         with open(osp.join(model_dir, 'metrics_val_best.json')) as restore_metrics:
             best_validation_loss = json.load(restore_metrics)['loss']
+    
+    if first_epoch == 0:
+        loss_log = open(model_dir+'/loss.log', 'w')
+        loss_log.write('# loss log for training starting in '+strftime("%Y-%m-%d %H:%M:%S", gmtime()) + '\n')
+        loss_log.write('epoch, loss, val_loss\n')
+        loss_log.flush()
+    else:
+        loss_log = open(model_dir+'/loss.log', 'a')
 
     for epoch in range(first_epoch+1,101):
 
