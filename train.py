@@ -67,8 +67,14 @@ if __name__ == '__main__':
                                                batch_size=64,
                                                validation_split=.25)
     
+    print(dataloaders.__len__())
+    
     train_dl = dataloaders['train']
     test_dl = dataloaders['test']
+
+    print(train_dl.dataset.__len__())
+    print(test_dl.dataset.__len__())
+    print(type(train_dl))
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(device)      

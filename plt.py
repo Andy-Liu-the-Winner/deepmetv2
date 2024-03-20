@@ -38,12 +38,15 @@ resolutions_arr = {
 }
 for key in resolutions_arr:
          plt.figure(1)
-         print(a[key]['u_perp_resolution'][1])
-         print(a[key]['u_perp_resolution'][0])
+        #  print(a[key]['u_perp_resolution'][1])
+        #  print(a[key]['u_perp_resolution'][0])
+         if key == 'deepMETResponse':
+            print(a[key]['u_perp_resolution'][1][0:40])
+            print(a[key]['u_perp_resolution'][0][0:40])
          xx = a[key]['u_perp_resolution'][1][0:40]
-         print(xx.shape)
+        #  print(xx.shape)
          yy = a[key]['u_perp_resolution'][0][0:40]
-         print(yy.shape)
+        #  print(yy.shape)
          plt.plot(xx, yy,color=colors[key], label=label_arr[key])
          plt.figure(2)
          xx = a[key]['u_perp_scaled_resolution'][1][0:40]
