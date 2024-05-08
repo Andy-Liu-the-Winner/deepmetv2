@@ -30,6 +30,7 @@ parser.add_argument('--data', default='/hildafs/projects/phy230010p/fep/DeepMETv
 parser.add_argument('--ckpts', default='/hildafs/projects/phy230010p/fep/DeepMETv2/ckpts_znunu/',
                     help="Name of the ckpts folder")
 
+scale_momentum = 128
 
 def train(model, device, optimizer, scheduler, loss_fn, dataloader, epoch):
     model.train()
