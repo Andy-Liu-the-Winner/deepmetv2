@@ -44,7 +44,9 @@ class Net(nn.Module):
     
     def forward(self, x_cont, x_cat, edge_index, batch):
         weights = self.graphnet(x_cont, x_cat, edge_index, batch)
-        return torch.sigmoid(weights)
+        relu_layer = nn.ReLU() #ReLU weights
+        return relu_layer(weights)
+        # return torch.sigmoid(weights) #old sigmoid weights
 
 def loss_fn(weights, prediction, truth, batch):
     # print('prediction:', prediction.shape)

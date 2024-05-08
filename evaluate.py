@@ -85,7 +85,8 @@ def evaluate(model, device, loss_fn, dataloader, metrics, deltaR, deltaR_dz, mod
         phi = torch.atan2(data.x[:,1], data.x[:,0])
         etaphi = torch.cat([data.x[:,3][:,None], phi[:,None]], dim=1)
         # NB: there is a problem right now for comparing hits at the +/- pi boundary 
-        edge_index = radius_graph(etaphi, r=deltaR, batch=data.batch, loop=True, max_num_neighbors=255)
+        edge_index = radius_graph(etaphi, r=deltaR, batch=data.batch, loop=False, max_num_neighbors=255)
+        edge_index = to_undirected(edge_index)  # Make the edge index undirected
         result = model(x_cont, x_cat, edge_index, data.batch)
         # print('evaluation result:')
         # print(result)
@@ -193,9 +194,9 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = net.Net(8, 3).to(device) #include puppi
     #model = net.Net(7, 3).to(device) #remove puppi
-    optimizer = torch.optim.AdamW(model.parameters(),lr=0.001)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=500, threshold=0.05)
-
+    optimizer = torch.optim.AdamW(model.parameters(),lr=0.001, weight_decay=0.001)
+    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=500, threshold=0.05)
+    scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.0001, max_lr=0.001, cycle_momentum=False)
     loss_fn = net.loss_fn
     metrics = net.metrics
     model_dir = osp.join(os.environ['PWD'],args.ckpts)

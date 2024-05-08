@@ -47,6 +47,7 @@ def train(model, device, optimizer, scheduler, loss_fn, dataloader, epoch):
             etaphi = torch.cat([data.x[:,3][:,None], phi[:,None]], dim=1)        
             # NB: there is a problem right now for comparing hits at the +/- pi boundary
             edge_index = radius_graph(etaphi, r=deltaR, batch=data.batch, loop=False, max_num_neighbors=255)
+            edge_index = to_undirected(edge_index)  # Make the edge index undirected
             result = model(x_cont, x_cat, edge_index, data.batch)
             loss = loss_fn(result, data.x, data.y, data.batch)
             loss.backward()
@@ -77,12 +78,15 @@ if __name__ == '__main__':
     print(type(train_dl))
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(device)      
+    print(device)
+
+    norm = torch.tensor([1./scale_momentum, 1./scale_momentum, 1./scale_momentum, 1., 1., 1.]).to(device)   # pt, px, py: scale by 128      
+    
     model = net.Net(8, 3).to(device) #include puppi
     print('model initialized')
     #model = net.Net(7, 3).to(device) #remove puppi
-    optimizer = torch.optim.AdamW(model.parameters(),lr=0.0001, weight_decay=0.001)
-    scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.0001, max_lr=0.01, cycle_momentum=False)
+    optimizer = torch.optim.AdamW(model.parameters(),lr=0.001, weight_decay=0.001)
+    scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.0001, max_lr=0.001, cycle_momentum=False)
     first_epoch = 0
     best_validation_loss = 10e7
     deltaR = 0.4
