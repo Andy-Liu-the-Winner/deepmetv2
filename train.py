@@ -25,9 +25,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--restore_file', default=None,
                     help="Optional, name of the file in --model_dir containing weights to reload before \
                     training")  # 'best' or 'train'
-parser.add_argument('--data', default='/hildafs/projects/phy230010p/fep/DeepMETv2/data_znunu/training/',
+parser.add_argument('--data', default='/hildafs/projects/phy230010p/fep/DeepMETv2/data_znunu/run3/',
                     help="Name of the data folder")
-parser.add_argument('--ckpts', default='/hildafs/projects/phy230010p/fep/DeepMETv2/ckpts_znunu/',
+parser.add_argument('--ckpts', default='/hildafs/projects/phy230010p/fep/DeepMETv2/ckpts_znunu_flattened/',
                     help="Name of the ckpts folder")
 
 scale_momentum = 128
@@ -41,6 +41,7 @@ def train(model, device, optimizer, scheduler, loss_fn, dataloader, epoch):
             print("data:",data)
             optimizer.zero_grad()
             data = data.to(device)
+            sample_weight = torch.full((data.y.shape[0],), 1.0, dtype=torch.float32, device=device)
             x_cont = data.x[:,:8] #include puppi
             #x_cont = data.x[:,:7] #remove puppi
             x_cat = data.x[:,8:].long()
@@ -50,7 +51,7 @@ def train(model, device, optimizer, scheduler, loss_fn, dataloader, epoch):
             edge_index = radius_graph(etaphi, r=deltaR, batch=data.batch, loop=False, max_num_neighbors=255)
             edge_index = to_undirected(edge_index)  # Make the edge index undirected
             result = model(x_cont, x_cat, edge_index, data.batch)
-            loss = loss_fn(result, data.x, data.y, data.batch)
+            loss = loss_fn(result, data.x, data.y, data.batch, sample_weight)
             loss.backward()
             optimizer.step()
             # update the average loss

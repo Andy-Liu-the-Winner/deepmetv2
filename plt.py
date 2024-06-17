@@ -43,6 +43,9 @@ for key in resolutions_arr:
          if key == 'deepMETResponse':
             print(a[key]['u_perp_resolution'][1][0:40])
             print(a[key]['u_perp_resolution'][0][0:40])
+         if key == 'MET':
+            print(a[key]['u_perp_resolution'][1][0:40])
+            print(a[key]['u_perp_resolution'][0][0:40])
          xx = a[key]['u_perp_resolution'][1][0:40]
         #  print(xx.shape)
          yy = a[key]['u_perp_resolution'][0][0:40]

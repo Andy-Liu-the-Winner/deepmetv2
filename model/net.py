@@ -48,7 +48,7 @@ class Net(nn.Module):
         return relu_layer(weights)
         # return torch.sigmoid(weights) #old sigmoid weights
 
-def loss_fn(weights, prediction, truth, batch):
+def loss_fn(weights, prediction, truth, batch, sample_weight=None):
     # print('prediction:', prediction.shape)
     # print('truth', truth.shape)
     px=prediction[:,0]
@@ -68,7 +68,35 @@ def loss_fn(weights, prediction, truth, batch):
     #tzero = torch.zeros(prediction.shape[0]).to('cuda')
     #BCE = nn.BCELoss()
     #prediction[:,]: pX,pY,pT,eta,d0,dz,mass,puppiWeight,pdgId,charge,fromPV
-    loss=0.5*( ( METx + true_px)**2 + ( METy + true_py)**2 ).mean() 
+    # flatten out MET
+    if sample_weight != None:
+        binnings = [0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 
+                    320, 340, 360, 380, 400, 420, 440, 460, 480, 500, 550, 600, 650, 700, 1000, 4000]
+
+        per_genMET_bin_weight = [0.93070056, 0.35927714, 0.28656409, 0.29433719, 0.32343765, 0.35436381,
+                                0.45301355, 0.57090288, 0.70162305, 0.85617394, 0.98718005, 1.19053963,
+                                1.44328697, 1.72151728, 2.02300314, 2.38527131, 2.60903403, 2.96740886,
+                                3.37263112, 3.80113776, 4.10378135, 4.83129837, 5.50106654, 6.43845126,
+                                7.30650132, 3.47393359, 4.34440619, 5.60510562, 6.80332763, 2.14469442,
+                                4.26239942]
+        # per_genMET_bin_weight = torch.tensor(per_genMET_bin_weight)
+
+        v_true = torch.stack((true_px,true_py),dim=1)
+        
+        true_uT = getscale(v_true)
+
+        for idx in range(len(binnings)-1):
+            mask_uT = (true_uT > binnings[idx]) & (true_uT <= binnings[idx+1])
+            sample_weight[mask_uT] = per_genMET_bin_weight[idx]            
+
+        print(sample_weight)
+        print(sample_weight.shape)
+        print(type(sample_weight))
+        # exit()
+
+        loss=0.5*( ( ( METx + true_px)**2 + ( METy + true_py)**2 ) * sample_weight ).mean()
+    else:
+        loss=0.5*( ( METx + true_px)**2 + ( METy + true_py)**2 ).mean() 
     #+ 5000*BCE(torch.where(prediction[:,9]==0, tzero, weights), torch.where(prediction[:,9]==0, tzero, prediction[:,7]))
     return loss
 

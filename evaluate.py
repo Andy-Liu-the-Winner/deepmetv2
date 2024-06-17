@@ -85,6 +85,7 @@ def evaluate(model, device, loss_fn, dataloader, metrics, deltaR, deltaR_dz, mod
         phi = torch.atan2(data.x[:,1], data.x[:,0])
         etaphi = torch.cat([data.x[:,3][:,None], phi[:,None]], dim=1)
         # NB: there is a problem right now for comparing hits at the +/- pi boundary 
+        sample_weight = torch.full((data.y.shape[0],), 1.0, dtype=torch.float32, device=device)
         edge_index = radius_graph(etaphi, r=deltaR, batch=data.batch, loop=False, max_num_neighbors=255)
         edge_index = to_undirected(edge_index)  # Make the edge index undirected
         result = model(x_cont, x_cat, edge_index, data.batch)
@@ -101,7 +102,7 @@ def evaluate(model, device, loss_fn, dataloader, metrics, deltaR, deltaR_dz, mod
         #toc = time.time()
         #print('Event processing speed', toc - tic)
 
-        loss = loss_fn(result, data.x, data.y, data.batch)
+        loss = loss_fn(result, data.x, data.y, data.batch, sample_weight)
 
         # compute all metrics on this batch
         # print(result)
