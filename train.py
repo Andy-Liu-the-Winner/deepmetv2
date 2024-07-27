@@ -82,9 +82,9 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(device)
 
-    norm = torch.tensor([1./scale_momentum, 1./scale_momentum, 1./scale_momentum, 1., 1., 1.]).to(device)   # pt, px, py: scale by 128      
+    norm = torch.tensor([1./scale_momentum, 1./scale_momentum, 1./scale_momentum, 1., 1., 1., 1., 1.]).to(device)   # pt, px, py: scale by 128      
     
-    model = net.Net(8, 3).to(device) #include puppi
+    model = net.Net(8, 3, norm).to(device) #include puppi
     print('model initialized')
     #model = net.Net(7, 3).to(device) #remove puppi
     optimizer = torch.optim.AdamW(model.parameters(),lr=0.001, weight_decay=0.001)

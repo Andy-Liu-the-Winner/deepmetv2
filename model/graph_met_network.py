@@ -9,9 +9,12 @@ from torch_geometric.nn.conv import GraphConv, EdgeConv, GCNConv
 from torch_cluster import radius_graph, knn_graph
 
 class GraphMETNetwork(nn.Module):
-    def __init__ (self, continuous_dim, cat_dim, output_dim=1, hidden_dim=32, conv_depth=1):
+    def __init__ (self, continuous_dim, cat_dim, norm, output_dim=1, hidden_dim=32, conv_depth=1):
+    # def __init__ (self, continuous_dim, cat_dim, output_dim=1, hidden_dim=32, conv_depth=1):    
         super(GraphMETNetwork, self).__init__()
         
+        self.datanorm = norm
+
         self.embed_charge = nn.Embedding(3, hidden_dim//4)
         self.embed_pdgid = nn.Embedding(7, hidden_dim//4)
         self.embed_pv = nn.Embedding(8, hidden_dim//4)
@@ -48,6 +51,10 @@ class GraphMETNetwork(nn.Module):
         print("x_cont:",x_cont)
         print("x_cat:",x_cat)
         print("edge_index:",edge_index)
+        
+        #scale momentum
+        
+        x_cont *= self.datanorm
         #print("cont")
         emb_cont = self.embed_continuous(x_cont)   
 
