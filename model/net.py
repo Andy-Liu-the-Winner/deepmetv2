@@ -48,7 +48,7 @@ class Net(nn.Module):
         return relu_layer(weights)
         # return torch.sigmoid(weights) #old sigmoid weights
 
-def loss_fn(weights, prediction, truth, batch, sample_weight=None):
+def loss_fn_weighted(weights, prediction, truth, batch, sample_weight=None):
     # print('prediction:', prediction.shape)
     # print('truth', truth.shape)
     px=prediction[:,0]
@@ -99,6 +99,54 @@ def loss_fn(weights, prediction, truth, batch, sample_weight=None):
         loss=0.5*( ( METx + true_px)**2 + ( METy + true_py)**2 ).mean() 
     #+ 5000*BCE(torch.where(prediction[:,9]==0, tzero, weights), torch.where(prediction[:,9]==0, tzero, prediction[:,7]))
     return loss
+
+def loss_fn_response_tune(weights, prediction, truth, batch, c = 350, scale_momentum = 128.):
+    px=prediction[:,0]
+    py=prediction[:,1]
+
+    true_px = truth[:,0] / scale_momentum
+    true_py = truth[:,1] / scale_momentum
+
+    METx = scatter_add(weights*px, batch)
+    METy = scatter_add(weights*py, batch)
+    # predicted MET/qT
+    print('METx:', METx)
+    print('METy:', METy)
+    print('true_px:', true_px)
+    print('true_py:', true_py)
+
+    v_true = torch.stack((true_px,true_py),dim=1)
+    v_regressed = torch.stack((METx,METy),dim=1)
+    response = getscale(v_regressed) / getscale(v_true)
+
+    loss = 0.5*( (METx + true_px)**2 + (METy + true_py)**2 ).mean()
+
+    pT_thres = 25./scale_momentum
+    resp_pos = torch.logical_and(response > 1., getscale(v_true) > pT_thres)
+    resp_neg = torch.logical_and(response < 1., getscale(v_true) > pT_thres)
+    c = c / scale_momentum
+
+    response_term = c * (torch.sum(1 - response[resp_neg]) + torch.sum(response[resp_pos] - 1))
+    print('response_term:', response_term)
+
+    loss += response_term
+    return loss
+
+def loss_fn(weights, prediction, truth, batch):
+    px=prediction[:,0]
+    py=prediction[:,1]
+
+    true_px = truth[:,0]
+    true_py = truth[:,1]
+
+    METx = scatter_add(weights*px, batch)
+    METy = scatter_add(weights*py, batch)
+    # predicted MET/qT
+
+    loss = 0.5*( (METx + true_px)**2 + (METy + true_py)**2 ).mean()
+    
+    return loss
+
 
 def getdot(vx, vy):
     return torch.einsum('bi,bi->b',vx,vy)

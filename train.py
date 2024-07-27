@@ -27,7 +27,7 @@ parser.add_argument('--restore_file', default=None,
                     training")  # 'best' or 'train'
 parser.add_argument('--data', default='/hildafs/projects/phy230010p/fep/DeepMETv2/data_znunu/run3/',
                     help="Name of the data folder")
-parser.add_argument('--ckpts', default='/hildafs/projects/phy230010p/fep/DeepMETv2/ckpts_znunu_flattened/',
+parser.add_argument('--ckpts', default='/hildafs/projects/phy230010p/fep/DeepMETv2/ckpts_znunu_response_350/',
                     help="Name of the ckpts folder")
 
 scale_momentum = 128
@@ -41,7 +41,8 @@ def train(model, device, optimizer, scheduler, loss_fn, dataloader, epoch):
             print("data:",data)
             optimizer.zero_grad()
             data = data.to(device)
-            sample_weight = torch.full((data.y.shape[0],), 1.0, dtype=torch.float32, device=device)
+            # sample_weight = torch.full((data.y.shape[0],), 1.0, dtype=torch.float32, device=device)
+            sample_weight = None
             x_cont = data.x[:,:8] #include puppi
             #x_cont = data.x[:,:7] #remove puppi
             x_cat = data.x[:,8:].long()
@@ -51,7 +52,7 @@ def train(model, device, optimizer, scheduler, loss_fn, dataloader, epoch):
             edge_index = radius_graph(etaphi, r=deltaR, batch=data.batch, loop=False, max_num_neighbors=255)
             edge_index = to_undirected(edge_index)  # Make the edge index undirected
             result = model(x_cont, x_cat, edge_index, data.batch)
-            loss = loss_fn(result, data.x, data.y, data.batch, sample_weight)
+            loss = loss_fn(result, data.x, data.y, data.batch)
             loss.backward()
             optimizer.step()
             # update the average loss
@@ -90,11 +91,13 @@ if __name__ == '__main__':
     optimizer = torch.optim.AdamW(model.parameters(),lr=0.001, weight_decay=0.001)
     scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.0001, max_lr=0.001, cycle_momentum=False)
     first_epoch = 0
+    max_epochs = 20
     best_validation_loss = 10e7
     deltaR = 0.4
     deltaR_dz = 0.3
 
-    loss_fn = net.loss_fn
+    loss_fn = net.loss_fn_response_tune
+    # loss_fn = net.loss_fn
     metrics = net.metrics
 
     model_dir = args.ckpts
@@ -120,7 +123,7 @@ if __name__ == '__main__':
     else:
         loss_log = open(model_dir+'/loss.log', 'a')
 
-    for epoch in range(first_epoch+1,101):
+    for epoch in range(first_epoch+1, max_epochs+1):
 
         print('Current best loss:', best_validation_loss)
         if '_last_lr' in scheduler.state_dict():
