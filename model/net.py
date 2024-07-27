@@ -36,9 +36,9 @@ class Net(nn.Module):
         return output
 '''
 class Net(nn.Module):
-    def __init__(self, continuous_dim, categorical_dim):
+    def __init__(self, continuous_dim, categorical_dim, norm):
         super(Net, self).__init__()
-        self.graphnet = GraphMETNetwork(continuous_dim, categorical_dim,
+        self.graphnet = GraphMETNetwork(continuous_dim, categorical_dim, norm,
                                         output_dim=1, hidden_dim=32,
                                         conv_depth=2)
     
