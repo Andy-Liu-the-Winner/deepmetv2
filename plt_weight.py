@@ -28,7 +28,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--restore_file', default=None,
                     help="Optional, name of the file in --model_dir containing weights to reload before \
                     training")  # 'best' or 'train'
-parser.add_argument('--data', default='data',
+parser.add_argument('--data', default='data_znunu/run3/',
                     help="Name of the data folder")
 parser.add_argument('--ckpts', default='ckpts',
                     help="Name of the ckpts folder")
@@ -60,7 +60,7 @@ def plot_weight(model, loss_fn, dataloader, metrics, deltaR, model_dir, saveplot
         'Pt': np.arange(-0.05,25.05,0.1),
         'eta': np.arange(-0.1,5.1,0.2),
         'Puppi': [-0.05, 0.05, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 1.1],
-        'graph_weight': np.arange(-0.05,1.15,0.01),
+        'graph_weight': np.arange(-0.05,5.,0.01), #changed to 2.5 from 1.15, since ReLU goes over 1 (may be temporary)
         'qT1D': np.arange(0,420,20),
     }
     #print("bin list:", binedges_list)
@@ -90,11 +90,19 @@ def plot_weight(model, loss_fn, dataloader, metrics, deltaR, model_dir, saveplot
         for i in range(1, len(binedges_list['Puppi'])):
             weight_puppi_hist[label[key]].append(0)
             weight_puppi_histN[label[key]].append(0)
-    weight_CH_hist['puppi0']=[]
-    weight_CH_hist['puppi1']=[]
-    for i in range(1, len(binedges_list['graph_weight'])):
-        weight_CH_hist['puppi0'].append(0)
-        weight_CH_hist['puppi1'].append(0)
+    weight_CH_hist['puppi0'] = dict()
+    weight_CH_hist['puppi1'] = dict()
+    for key in (11, 13, 211):
+        weight_CH_hist['puppi0'][label[key]]=[]
+        weight_CH_hist['puppi1'][label[key]]=[]
+        for i in range(1, len(binedges_list['graph_weight'])):
+            weight_CH_hist['puppi0'][label[key]].append(0)
+            weight_CH_hist['puppi1'][label[key]].append(0)
+    # weight_CH_hist['puppi0']=[]
+    # weight_CH_hist['puppi1']=[]
+    # for i in range(1, len(binedges_list['graph_weight'])):
+    #     weight_CH_hist['puppi0'].append(0)
+    #     weight_CH_hist['puppi1'].append(0)
     weight_qT_hist['TrueMET']=[]
     weight_qT_hist['GraphMET']=[]
     weight_qT_hist['PFMET']=[]
@@ -176,12 +184,20 @@ def plot_weight(model, loss_fn, dataloader, metrics, deltaR, model_dir, saveplot
                 weight_puppi_hist[label[key]][i-1]+=np.sum(W_i)
                 weight_puppi_histN[label[key]][i-1]+=len(W_i)
         # weight distribution
-        W_arr=result[np.where(result[:,0].cpu() == 211)].cpu().detach().numpy()
-        for i in range(1, len(binedges_list['graph_weight'])):
-            W_i=W_arr[np.where((W_arr[:,3]==0) & (W_arr[:,4]>=binedges_list['graph_weight'][i-1]) & (W_arr[:,4]<binedges_list['graph_weight'][i]) )][:,4]
-            weight_CH_hist['puppi0'][i-1]+=len(W_i)
-            W_i=W_arr[np.where((W_arr[:,3]==1) & (W_arr[:,4]>=binedges_list['graph_weight'][i-1]) & (W_arr[:,4]<binedges_list['graph_weight'][i]) )][:,4]
-            weight_CH_hist['puppi1'][i-1]+=len(W_i)
+        for key in (11, 13, 211):
+            W_arr=result[np.where(result[:,0].cpu() == key)].cpu().detach().numpy()
+            for i in range(1, len(binedges_list['graph_weight'])):
+                W_i=W_arr[np.where((W_arr[:,3]==0) & (W_arr[:,4]>=binedges_list['graph_weight'][i-1]) & (W_arr[:,4]<binedges_list['graph_weight'][i]) )][:,4]
+                weight_CH_hist['puppi0'][label[key]][i-1]+=len(W_i)
+                W_i=W_arr[np.where((W_arr[:,3]==1) & (W_arr[:,4]>=binedges_list['graph_weight'][i-1]) & (W_arr[:,4]<binedges_list['graph_weight'][i]) )][:,4]
+                weight_CH_hist['puppi1'][label[key]][i-1]+=len(W_i)
+        # For only charged hadrons
+        # W_arr=result[np.where(result[:,0].cpu() == 211)].cpu().detach().numpy()
+        # for i in range(1, len(binedges_list['graph_weight'])):
+        #     W_i=W_arr[np.where((W_arr[:,3]==0) & (W_arr[:,4]>=binedges_list['graph_weight'][i-1]) & (W_arr[:,4]<binedges_list['graph_weight'][i]) )][:,4]
+        #     weight_CH_hist['puppi0'][i-1]+=len(W_i)
+        #     W_i=W_arr[np.where((W_arr[:,3]==1) & (W_arr[:,4]>=binedges_list['graph_weight'][i-1]) & (W_arr[:,4]<binedges_list['graph_weight'][i]) )][:,4]
+        #     weight_CH_hist['puppi1'][i-1]+=len(W_i)
 
     for key in weight_arr:
         for i in range(1, len(binedges_list['Pt'])):
@@ -202,6 +218,12 @@ def plot_weight(model, loss_fn, dataloader, metrics, deltaR, model_dir, saveplot
       'weight_CH_hist':weight_CH_hist,
       'weight_qT_hist':weight_qT_hist,
     }
+    print(binedges_list)
+    print(weight_pt_hist)
+    print(weight_eta_hist)
+    print(weight_puppi_hist)
+    print(weight_CH_hist)
+    print(weight_qT_hist)
     utils.save(weights, 'weight.plt')
     return result
 
@@ -210,8 +232,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     dataloaders = data_loader.fetch_dataloader(data_dir=osp.join(os.environ['PWD'],args.data), 
-                                               batch_size=60, 
-                                               validation_split=0.5)
+                                               batch_size=64, 
+                                               validation_split=0.25)
     train_dl = dataloaders['train']
     test_dl = dataloaders['test']
 
@@ -221,8 +243,10 @@ if __name__ == '__main__':
     #model = torch.jit.script(net.Net(7, 3)).to('cuda') # [px, py, pt, eta, d0, dz, mass], [pdgid, charge, fromPV]
     model = net.Net(8, 3).to('cuda')
     #optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=5e-3)
-    optimizer = torch.optim.AdamW(model.parameters(),lr=0.001)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=500, threshold=0.05)
+    # optimizer = torch.optim.AdamW(model.parameters(),lr=0.001)
+    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=500, threshold=0.05)
+    optimizer = torch.optim.AdamW(model.parameters(),lr=0.001, weight_decay=0.001)
+    scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.0001, max_lr=0.001, cycle_momentum=False)
     first_epoch = 0
     best_validation_loss = 10e7
     deltaR = 0.4
