@@ -100,12 +100,12 @@ def loss_fn_weighted(weights, prediction, truth, batch, sample_weight=None):
     #+ 5000*BCE(torch.where(prediction[:,9]==0, tzero, weights), torch.where(prediction[:,9]==0, tzero, prediction[:,7]))
     return loss
 
-def loss_fn_response_tune(weights, prediction, truth, batch, c = 350, scale_momentum = 128.):
+def loss_fn_response_tune(weights, prediction, truth, batch, c = 4000, scale_momentum = 128.):
     px=prediction[:,0]
     py=prediction[:,1]
 
-    true_px = truth[:,0] / scale_momentum
-    true_py = truth[:,1] / scale_momentum
+    true_px = truth[:,0] #/ scale_momentum
+    true_py = truth[:,1] #/ scale_momentum
 
     METx = scatter_add(weights*px, batch)
     METy = scatter_add(weights*py, batch)
@@ -117,27 +117,85 @@ def loss_fn_response_tune(weights, prediction, truth, batch, c = 350, scale_mome
 
     v_true = torch.stack((true_px,true_py),dim=1)
     v_regressed = torch.stack((METx,METy),dim=1)
-    response = getscale(v_regressed) / getscale(v_true)
+    # response = getscale(v_regressed) / getscale(v_true)
+    response = getdot(-v_regressed,v_true)/getdot(v_true,v_true)
 
     loss = 0.5*( (METx + true_px)**2 + (METy + true_py)**2 ).mean()
 
-    pT_thres = 25./scale_momentum
+    pT_thres = 50.#/scale_momentum
     resp_pos = torch.logical_and(response > 1., getscale(v_true) > pT_thres)
     resp_neg = torch.logical_and(response < 1., getscale(v_true) > pT_thres)
-    c = c / scale_momentum
+    c = c #/ scale_momentum
 
     response_term = c * (torch.sum(1 - response[resp_neg]) + torch.sum(response[resp_pos] - 1))
     print('response_term:', response_term)
+    print('resolution term:', loss)
 
     loss += response_term
+    print('total loss:', loss)
     return loss
 
-def loss_fn(weights, prediction, truth, batch):
+def loss_fn_response_binned(weights, prediction, truth, batch, c = 1000, scale_momentum = 128.):
     px=prediction[:,0]
     py=prediction[:,1]
 
-    true_px = truth[:,0]
-    true_py = truth[:,1]
+    true_px = truth[:,0] #/ scale_momentum
+    true_py = truth[:,1] #/ scale_momentum
+
+    METx = scatter_add(weights*px, batch)
+    METy = scatter_add(weights*py, batch)
+    # predicted MET/qT
+
+
+    v_true = torch.stack((true_px,true_py),dim=1)
+    v_regressed = torch.stack((METx,METy),dim=1)
+    # response = getscale(v_regressed) / getscale(v_true)
+    response = getdot(-v_regressed,v_true)/getdot(v_true,v_true)
+    
+    pt_truth = getscale(v_true)
+    pt_cut = pt_truth > 0.
+    response = response[pt_cut]
+    pt_truth_filtered = pt_truth[pt_cut]
+
+    filter_bin0 = torch.logical_and(pt_truth_filtered > 50., pt_truth_filtered <= 100.)
+    filter_bin1 = torch.logical_and(pt_truth_filtered > 100., pt_truth_filtered <= 200.)
+    filter_bin2 = torch.logical_and(pt_truth_filtered > 200., pt_truth_filtered <= 300.)
+    filter_bin3 = torch.logical_and(pt_truth_filtered > 300., pt_truth_filtered <= 400.)
+    filter_bin4 = pt_truth_filtered > 400.
+
+    resp_pos_bin0 = response[torch.logical_and(filter_bin0, response > 1.)]
+    resp_neg_bin0 = response[torch.logical_and(filter_bin0, response < 1.)]
+    resp_pos_bin1 = response[torch.logical_and(filter_bin1, response > 1.)]
+    resp_neg_bin1 = response[torch.logical_and(filter_bin1, response < 1.)]
+    resp_pos_bin2 = response[torch.logical_and(filter_bin2, response > 1.)]
+    resp_neg_bin2 = response[torch.logical_and(filter_bin2, response < 1.)]
+    resp_pos_bin3 = response[torch.logical_and(filter_bin3, response > 1.)]
+    resp_neg_bin3 = response[torch.logical_and(filter_bin3, response < 1.)]
+    resp_pos_bin4 = response[torch.logical_and(filter_bin4, response > 1.)]
+    resp_neg_bin4 = response[torch.logical_and(filter_bin4, response < 1.)]
+    resp_bins = [resp_pos_bin0, resp_neg_bin0, resp_pos_bin1, resp_neg_bin1, 
+                 resp_pos_bin2, resp_neg_bin2, resp_pos_bin3, resp_neg_bin3, 
+                 resp_pos_bin4, resp_neg_bin4]
+
+    c = c #/ scale_momentum
+    bin_weights = [1.070056, 1.05927714, 1.08656409, 0.9433719, 0.92343765]
+    response_term = 0
+    for i in range(len(bin_weights)):
+        response_term += bin_weights[i] * (torch.sum(1 - resp_bins[2*i+1]) + torch.sum(resp_bins[2*i] - 1))
+        
+    response_term = c * response_term
+    
+    loss = 0.5*( (METx + true_px)**2 + (METy + true_py)**2 ).mean()
+    loss += response_term
+    print('total loss:', loss)
+    return loss
+
+def loss_fn(weights, prediction, truth, batch, scale_momentum = 128.):
+    px=prediction[:,0]
+    py=prediction[:,1]
+
+    true_px = truth[:,0] / scale_momentum
+    true_py = truth[:,1] / scale_momentum
 
     METx = scatter_add(weights*px, batch)
     METy = scatter_add(weights*py, batch)
