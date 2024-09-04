@@ -11,6 +11,7 @@ parser.add_argument('--restore_file', default=None,
                     training")  # 'best' or 'train'
 parser.add_argument('--ckpts', default='ckpts',
                     help="Name of the ckpts folder")
+parser.add_argument('--comparison', default=None, help="Name of ckpts folder to compare with")
 
 
 args = parser.parse_args()
@@ -23,7 +24,7 @@ colors = {
     'MET':  'magenta',
 }
 label_arr = {
-    'MET':     'Graph MET' ,
+    'MET':     'DeepMETv2' ,
     'pfMET':    'PF MET',
     'puppiMET': 'PUPPI MET',
     'deepMETResponse': 'DeepMETResponse',
@@ -37,6 +38,9 @@ resolutions_arr = {
     'deepMETResolution': [[],[],[]],
 }
 for key in resolutions_arr:
+         #skip deepMETResolution and deepMETResponse while broken
+         if key == 'deepMETResolution' or key == 'deepMETResponse':
+              continue
          plt.figure(1)
         #  print(a[key]['u_perp_resolution'][1])
         #  print(a[key]['u_perp_resolution'][0])
@@ -67,6 +71,31 @@ for key in resolutions_arr:
          xx = a[key]['R'][1][0:40]
          yy = a[key]['R'][0][0:40]
          plt.plot(xx, yy,color=colors[key], label=label_arr[key])
+
+if args.comparison != None:
+    a = load(args.comparison + '/best.resolutions')
+    plt.figure(1)
+    xx = a['MET']['u_perp_resolution'][1][0:40]
+    #  print(xx.shape)
+    yy = a['MET']['u_perp_resolution'][0][0:40]
+    #  print(yy.shape)
+    plt.plot(xx, yy,color='brown', label='comparison')
+    plt.figure(2)
+    xx = a['MET']['u_perp_scaled_resolution'][1][0:40]
+    yy = a['MET']['u_perp_scaled_resolution'][0][0:40]
+    plt.plot(xx, yy,color='brown', label='comparison')
+    plt.figure(3)
+    xx = a['MET']['u_par_resolution'][1][0:40]
+    yy = a['MET']['u_par_resolution'][0][0:40]
+    plt.plot(xx, yy,color='brown', label='comparison')
+    plt.figure(4)
+    xx = a['MET']['u_par_scaled_resolution'][1][0:40]
+    yy = a['MET']['u_par_scaled_resolution'][0][0:40]
+    plt.plot(xx, yy,color='brown', label='comparison')
+    plt.figure(5)
+    xx = a['MET']['R'][1][0:40]
+    yy = a['MET']['R'][0][0:40]
+    plt.plot(xx, yy,color='brown', label='comparison')
 
 if(True):
     model_dir=args.ckpts+'/'+args.restore_file+'_'
