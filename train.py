@@ -27,7 +27,7 @@ parser.add_argument('--restore_file', default=None,
                     training")  # 'best' or 'train'
 parser.add_argument('--data', default='/hildafs/projects/phy230010p/fep/DeepMETv2/data_znunu/run3/',
                     help="Name of the data folder")
-parser.add_argument('--ckpts', default='/hildafs/projects/phy230010p/fep/DeepMETv2/ckpts_znunu_response_350/',
+parser.add_argument('--ckpts', default='/hildafs/projects/phy230010p/fep/DeepMETv2/ckpts_znunu_response_4000',
                     help="Name of the ckpts folder")
 
 scale_momentum = 128
@@ -91,11 +91,12 @@ if __name__ == '__main__':
     optimizer = torch.optim.AdamW(model.parameters(),lr=0.001, weight_decay=0.001)
     scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.0001, max_lr=0.001, cycle_momentum=False)
     first_epoch = 0
-    max_epochs = 20
+    max_epochs = 50
     best_validation_loss = 10e7
     deltaR = 0.4
     deltaR_dz = 0.3
 
+    # loss_fn = net.loss_fn_response_binned
     loss_fn = net.loss_fn_response_tune
     # loss_fn = net.loss_fn
     metrics = net.metrics

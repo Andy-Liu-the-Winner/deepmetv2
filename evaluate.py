@@ -20,6 +20,10 @@ from torch_cluster import radius_graph, knn_graph
 
 import matplotlib.pyplot as plt
 
+
+scale_momentum = 128
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--restore_file', default='best', help="name of the file in --model_dir \
                      containing weights to load")
@@ -85,7 +89,8 @@ def evaluate(model, device, loss_fn, dataloader, metrics, deltaR, deltaR_dz, mod
         phi = torch.atan2(data.x[:,1], data.x[:,0])
         etaphi = torch.cat([data.x[:,3][:,None], phi[:,None]], dim=1)
         # NB: there is a problem right now for comparing hits at the +/- pi boundary 
-        sample_weight = torch.full((data.y.shape[0],), 1.0, dtype=torch.float32, device=device)
+        # sample_weight = torch.full((data.y.shape[0],), 1.0, dtype=torch.float32, device=device)
+        sample_weight = None
         edge_index = radius_graph(etaphi, r=deltaR, batch=data.batch, loop=False, max_num_neighbors=255)
         edge_index = to_undirected(edge_index)  # Make the edge index undirected
         result = model(x_cont, x_cat, edge_index, data.batch)
@@ -102,7 +107,7 @@ def evaluate(model, device, loss_fn, dataloader, metrics, deltaR, deltaR_dz, mod
         #toc = time.time()
         #print('Event processing speed', toc - tic)
 
-        loss = loss_fn(result, data.x, data.y, data.batch, sample_weight)
+        loss = loss_fn(result, data.x, data.y, data.batch)
 
         # compute all metrics on this batch
         # print(result)
@@ -193,12 +198,17 @@ if __name__ == '__main__':
 
     # Define the model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = net.Net(8, 3).to(device) #include puppi
+
+    norm = torch.tensor([1./scale_momentum, 1./scale_momentum, 1./scale_momentum, 1., 1., 1., 1., 1.]).to(device)   # pt, px, py: scale by 128
+
+    model = net.Net(8, 3, norm).to(device) #include puppi
     #model = net.Net(7, 3).to(device) #remove puppi
     optimizer = torch.optim.AdamW(model.parameters(),lr=0.001, weight_decay=0.001)
     # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=500, threshold=0.05)
     scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.0001, max_lr=0.001, cycle_momentum=False)
-    loss_fn = net.loss_fn
+    # loss_fn = net.loss_fn_response_binned
+    loss_fn = net.loss_fn_response_tune
+    # loss_fn = net.loss_fn
     metrics = net.metrics
     model_dir = osp.join(os.environ['PWD'],args.ckpts)
     deltaR = 0.4
