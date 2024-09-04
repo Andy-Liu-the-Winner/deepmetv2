@@ -53,8 +53,8 @@ class GraphMETNetwork(nn.Module):
         print("edge_index:",edge_index)
         
         #scale momentum
-        
-        x_cont *= self.datanorm
+        # x_cont *= self.datanorm
+
         #print("cont")
         emb_cont = self.embed_continuous(x_cont)   
 
