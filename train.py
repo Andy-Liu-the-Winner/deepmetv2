@@ -8,7 +8,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.utils import to_undirected
 from torch_cluster import radius_graph, knn_graph
-from torch_geometric.datasets import MNISTSuperpixels
+# from torch_geometric.datasets import MNISTSuperpixels
+# what is this MNISTSuperpixels for????
 import torch_geometric.transforms as T
 from torch_geometric.data import DataLoader
 from tqdm import tqdm
@@ -25,9 +26,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--restore_file', default=None,
                     help="Optional, name of the file in --model_dir containing weights to reload before \
                     training")  # 'best' or 'train'
-parser.add_argument('--data', default='/hildafs/projects/phy230010p/fep/DeepMETv2/data_znunu/run3/',
+parser.add_argument('--data', default='/hildafs/projects/phy230010p/andy_liu/deepmetv2/data_znunu/run3/',
                     help="Name of the data folder")
-parser.add_argument('--ckpts', default='/hildafs/projects/phy230010p/fep/DeepMETv2/ckpts_znunu_response_4000',
+parser.add_argument('--ckpts', default='/hildafs/projects/phy230010p/andy_liu/deepmetv2/ckpts_znunu_response_4000',
                     help="Name of the ckpts folder")
 
 scale_momentum = 128
@@ -60,7 +61,8 @@ def train(model, device, optimizer, scheduler, loss_fn, dataloader, epoch):
             loss_avg.update(loss.item())
             t.set_postfix(loss='{:05.3f}'.format(loss_avg()))
             t.update()
-    scheduler.step(np.mean(loss_avg_arr))
+    if (len(loss_avg_arr) != 0):
+        scheduler.step(np.mean(loss_avg_arr))
     print('Training epoch: {:02d}, MSE: {:.4f}'.format(epoch, np.mean(loss_avg_arr)))
     return np.mean(loss_avg_arr)
 
@@ -102,10 +104,10 @@ if __name__ == '__main__':
     metrics = net.metrics
 
     model_dir = args.ckpts
-    # loss_log = open(model_dir+'/loss.log', 'w')
-    # loss_log.write('# loss log for training starting in '+strftime("%Y-%m-%d %H:%M:%S", gmtime()) + '\n')
-    # loss_log.write('epoch, loss, val_loss\n')
-    # loss_log.flush()
+    loss_log = open(model_dir+'/loss.log', 'w')
+    loss_log.write('# loss log for training starting in '+strftime("%Y-%m-%d %H:%M:%S", gmtime()) + '\n')
+    loss_log.write('epoch, loss, val_loss\n')
+    loss_log.flush()
 
     # reload weights from restore_file if specified
     if args.restore_file is not None:
