@@ -1,0 +1,10 @@
+{
+    "name": "vera",
+    "host": "vera.psc.edu",
+    "protocol": "sftp",
+    "port": 22,
+    "username": "andy_liu",
+    "remotePath": "/hildafs/projects/phy230010p/andy_liu",
+    "password": "${env:SFTP_PASSWORD}",
+    "uploadOnSave": true
+}

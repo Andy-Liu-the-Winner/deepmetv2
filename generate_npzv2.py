@@ -68,7 +68,7 @@ def future_savez(i, events_slice, nparticles_per_event):
         # particle_list = np.array(particle_list)
 
         # eventi = [particle_list,genmet_list]
-        npz_file='/hildafs/projects/phy230010p/fep/DeepMETv2/data_znunu/'+dataset+'/raw/'+dataset+'_file'+str(currentfile)+'_slice_'+str(i)+'_nevent_'+str(len(events_slice))
+        npz_file='/hildafs/projects/phy230010p/andy_liu/deepmetv2/data_znunu/'+dataset+'/raw/'+dataset+'_file'+str(currentfile)+'_slice_'+str(i)+'_nevent_'+str(len(events_slice))
         np.savez(npz_file,x=particle_list,y=genmet_list) 
 
         #toc=time.time()
