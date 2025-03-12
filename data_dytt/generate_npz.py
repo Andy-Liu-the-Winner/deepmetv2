@@ -72,9 +72,6 @@ def future_savez(dataset,currentfile):
    
     events_slice['Muon'] = events_slice.Muon[events_slice.istightMuon]
     events_slice['Electron'] = events_slice.Electron[events_slice.istightElectron]
-        
-    print(events_slice['Muon'])
-
     n_tight_leptons = ak.count(events_slice.Muon.pt,axis=-1) + ak.count(events_slice.Electron.pt,axis=-1)
     select_events_mask = n_tight_leptons >= options.n_leptons
     selected_events = events_slice[select_events_mask]
@@ -98,19 +95,21 @@ def future_savez(dataset,currentfile):
     leptons_py = ak.sum(leptons_py,axis=1)
 
     met_list = np.column_stack([
-            selected_events.GenMET.pt * np.cos(selected_events.GenMET.phi)+ leptons_px,
-            selected_events.GenMET.pt * np.sin(selected_events.GenMET.phi)+ leptons_py,
-            selected_events.MET.pt * np.cos(selected_events.MET.phi)+ leptons_px,
-            selected_events.MET.pt * np.sin(selected_events.MET.phi)+ leptons_py,
-            selected_events.PuppiMET.pt * np.cos(selected_events.PuppiMET.phi)+ leptons_px,
-            selected_events.PuppiMET.pt * np.sin(selected_events.PuppiMET.phi)+ leptons_py,
-            selected_events.DeepMETResponseTune.pt * np.cos(selected_events.DeepMETResponseTune.phi)+ leptons_px,
-            selected_events.DeepMETResponseTune.pt * np.sin(selected_events.DeepMETResponseTune.phi)+ leptons_py,
-            selected_events.DeepMETResolutionTune.pt * np.cos(selected_events.DeepMETResolutionTune.phi)+ leptons_px,
-            selected_events.DeepMETResolutionTune.pt * np.sin(selected_events.DeepMETResolutionTune.phi)+ leptons_py,
-            selected_events.LHE.HT
+        ak.to_numpy((selected_events.GenMET.pt * np.cos(selected_events.GenMET.phi) + leptons_px).compute()),
+        ak.to_numpy((selected_events.GenMET.pt * np.sin(selected_events.GenMET.phi) + leptons_py).compute()),
+        ak.to_numpy((selected_events.MET.pt * np.cos(selected_events.MET.phi) + leptons_px).compute()),
+        ak.to_numpy((selected_events.MET.pt * np.sin(selected_events.MET.phi) + leptons_py).compute()),
+        ak.to_numpy((selected_events.PuppiMET.pt * np.cos(selected_events.PuppiMET.phi) + leptons_px).compute()),
+        ak.to_numpy((selected_events.PuppiMET.pt * np.sin(selected_events.PuppiMET.phi) + leptons_py).compute()),
+        ak.to_numpy((selected_events.DeepMETResponseTune.pt * np.cos(selected_events.DeepMETResponseTune.phi) + leptons_px).compute()),
+        ak.to_numpy((selected_events.DeepMETResponseTune.pt * np.sin(selected_events.DeepMETResponseTune.phi) + leptons_py).compute()),
+        ak.to_numpy((selected_events.DeepMETResolutionTune.pt * np.cos(selected_events.DeepMETResolutionTune.phi) + leptons_px).compute()),
+        ak.to_numpy((selected_events.DeepMETResolutionTune.pt * np.sin(selected_events.DeepMETResolutionTune.phi) + leptons_py).compute()),
+        ak.to_numpy(selected_events.LHE.HT.compute())
     ])
     met_list=np.array(met_list)
+    # print("met_list:", met_list, "\n")
+    print("met_list shape:", met_list.shape, "\n")
 
     
     
@@ -128,39 +127,35 @@ def future_savez(dataset,currentfile):
     selected_events['PFCands']=selected_events.PFCands[mask]
     #print(len(selected_events.PFCands.pt[0]))
 
-    nparticles_per_event = max(ak.num(selected_events.PFCands.pt, axis=1))
-    print(len(selected_events))
+    nparticles_per_event = int(max(ak.num(selected_events.PFCands.pt, axis=1).compute()))
     
-    
+    print("nparticles_per_event:", nparticles_per_event, "\n")
+    print(len(selected_events.compute()))
     #save the rest of PFcandidates 
-    particle_list = np.full((11,len(selected_events),nparticles_per_event),-999, dtype='float32')
-    particle_list[0]= ak.fill_none(ak.pad_none(selected_events.PFCands.pt, nparticles_per_event,clip=True),-999)
-    particle_list[1]= ak.fill_none(ak.pad_none(selected_events.PFCands.eta, nparticles_per_event,clip=True),-999)
-    particle_list[2]= ak.fill_none(ak.pad_none(selected_events.PFCands.phi, nparticles_per_event,clip=True),-999)
-    particle_list[3]= ak.fill_none(ak.pad_none(selected_events.PFCands.d0, nparticles_per_event,clip=True),-999)
-    particle_list[4]= ak.fill_none(ak.pad_none(selected_events.PFCands.dz, nparticles_per_event,clip=True),-999)
-    particle_list[5]= ak.fill_none(ak.pad_none(selected_events.PFCands.mass, nparticles_per_event,clip=True),-999)
-    particle_list[6]= ak.fill_none(ak.pad_none(selected_events.PFCands.puppiWeight, nparticles_per_event,clip=True),-999)
-    particle_list[7]= ak.fill_none(ak.pad_none(selected_events.PFCands.pdgId, nparticles_per_event,clip=True),-999)
-    particle_list[8]= ak.fill_none(ak.pad_none(selected_events.PFCands.charge, nparticles_per_event,clip=True),-999)
-    particle_list[9]= ak.fill_none(ak.pad_none(selected_events.PFCands.fromPV, nparticles_per_event,clip=True),-999)
+    particle_list = np.full((11,len(selected_events.compute()),nparticles_per_event),-999, dtype='float32')
+    particle_list[0]= ak.fill_none(ak.pad_none(selected_events.PFCands.pt, nparticles_per_event,clip=True).compute(),-999)
+    particle_list[1]= ak.fill_none(ak.pad_none(selected_events.PFCands.eta, nparticles_per_event,clip=True).compute(),-999)
+    particle_list[2]= ak.fill_none(ak.pad_none(selected_events.PFCands.phi, nparticles_per_event,clip=True).compute(),-999)
+    particle_list[3]= ak.fill_none(ak.pad_none(selected_events.PFCands.d0, nparticles_per_event,clip=True).compute(),-999)
+    particle_list[4]= ak.fill_none(ak.pad_none(selected_events.PFCands.dz, nparticles_per_event,clip=True).compute(),-999)
+    particle_list[5]= ak.fill_none(ak.pad_none(selected_events.PFCands.mass, nparticles_per_event,clip=True).compute(),-999)
+    particle_list[6]= ak.fill_none(ak.pad_none(selected_events.PFCands.puppiWeight, nparticles_per_event,clip=True).compute(),-999)
+    particle_list[7]= ak.fill_none(ak.pad_none(selected_events.PFCands.pdgId, nparticles_per_event,clip=True).compute(),-999)
+    particle_list[8]= ak.fill_none(ak.pad_none(selected_events.PFCands.charge, nparticles_per_event,clip=True).compute(),-999)
+    particle_list[9]= ak.fill_none(ak.pad_none(selected_events.PFCands.fromPV, nparticles_per_event,clip=True).compute(),-999)
     # particle_list[10]= ak.fill_none(ak.pad_none(selected_events.PFCands.pvRef, nparticles_per_event,clip=True),-999)
-    particle_list[10]= ak.fill_none(ak.pad_none(selected_events.PFCands.pvAssocQuality, nparticles_per_event,clip=True),-999)
-    
+    particle_list[10]= ak.fill_none(ak.pad_none(selected_events.PFCands.pvAssocQuality, nparticles_per_event,clip=True).compute(),-999)
+    print("particle_list shape:", particle_list.shape, "\n")
    
     
     print("saving")
     
     
-    npz_file='/hildafs/projects/phy230010p/fep/DeepMETv2/data_dytt/'+dataset+'/raw/'+dataset+'_file'+str(currentfile)+'_slice_'+str(i)+'_nevent_'+str(len(selected_events))
+    npz_file='/hildafs/projects/phy230010p/share/NanoAOD/npz_files/'+dataset+'/raw/'+dataset+'_file'+str(currentfile)+'_slice_'+str(i)+'_nevent_'+str(len(selected_events.compute()))
     
     #,y=met_list
-    #print("met_list:", met_list.shape)
-    try:
 
-        np.savez(npz_file,x=particle_list,y=met_list)
-    except:
-        print("saving failed")
+    np.savez(npz_file,x=particle_list,y=met_list)
 
 
 
@@ -211,7 +206,7 @@ if __name__ == '__main__':
             if currentfile<options.startfile:
                 currentfile+=1
                 continue
-            events = NanoEventsFactory.from_root(file, schemaclass=PFNanoAODSchema).events()
+            events = NanoEventsFactory.from_root({file: 'Events'}, schemaclass=PFNanoAODSchema).events()
             nevents_total = len(events)
             print(file, ' Number of events:', nevents_total)
 
