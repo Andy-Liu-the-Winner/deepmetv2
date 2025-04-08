@@ -73,10 +73,9 @@ dataset = METDataset(os.environ['PWD']+'/data/')
 
 where `/data/` is the folder where the .npz files used for conversion are. The conversion will generate a sub-folder called `processed` inside such folder, where the .pt files are going to be stored. If you put data in a different directory you should not use os pwd but with your directory. Also, there is one thing to note, the code works for numpy<1.26.4. For convenience, you could do
 <pre>
-         pip uninstall numpy
-
-         pip install "numpy<1.26.4"
-<\pre>
+pip uninstall numpy
+pip install "numpy<1.26.4"
+</pre>
 
 ## Hardware
 
