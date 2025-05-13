@@ -65,7 +65,7 @@ def future_savez(dataset,currentfile):
     temp = events_slice[:]
     
     tightMuonMask = ((events_slice.Muon.tightId == 1) & ( events_slice.Muon.pfRelIso03_all < 0.15) & (events_slice.Muon.pt > 20.))
-    tightElectronMask = ((events_slice.Electron.mvaIso_WP80 == 1) & (events_slice.Electron.pt > 20.0))
+    tightElectronMask = ( (events_slice.Electron.pt > 20.0))
    
     events_slice['istightMuon'] = tightMuonMask
     events_slice['istightElectron'] = tightElectronMask
@@ -79,7 +79,7 @@ def future_savez(dataset,currentfile):
     tightMuonMask = ((selected_events.Muon.tightId == 1) & (selected_events.Muon.pfRelIso03_all < 0.15) & (selected_events.Muon.pt > 20.))
     selected_events['istightMuon'] = tightMuonMask
 
-    tightElectronMask = ((selected_events.Electron.mvaIso_WP80 == 1) & (selected_events.Electron.pt > 20.0))
+    tightElectronMask = ((selected_events.Electron.pt > 20.0))
     selected_events['istightElectron'] = tightElectronMask
 
     muons = selected_events.Muon[selected_events.istightMuon]
@@ -129,8 +129,8 @@ def future_savez(dataset,currentfile):
 
     nparticles_per_event = int(max(ak.num(selected_events.PFCands.pt, axis=1).compute()))
     
-    print("nparticles_per_event:", nparticles_per_event, "\n")
-    print(len(selected_events.compute()))
+    # print("nparticles_per_event:", nparticles_per_event, "\n")
+    # print(len(selected_events.compute()))
     #save the rest of PFcandidates 
     particle_list = np.full((11,len(selected_events.compute()),nparticles_per_event),-999, dtype='float32')
     particle_list[0]= ak.fill_none(ak.pad_none(selected_events.PFCands.pt, nparticles_per_event,clip=True).compute(),-999)
@@ -207,7 +207,7 @@ if __name__ == '__main__':
                 currentfile+=1
                 continue
             events = NanoEventsFactory.from_root({file: 'Events'}, schemaclass=PFNanoAODSchema).events()
-            nevents_total = len(events)
+            nevents_total = len(events.compute())
             print(file, ' Number of events:', nevents_total)
 
             for i in range(int(nevents_total / eventperfile)+1):

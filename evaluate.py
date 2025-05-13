@@ -70,10 +70,8 @@ def evaluate(model, device, loss_fn, dataloader, metrics, deltaR, deltaR_dz, mod
         'deepMETResolution': 'DeepMETResolution',
         'MET': 'DeepMETv2'
     }
-
     # compute metrics over the dataset
     for data in dataloader:
-
         has_deepmet = (data.y.size()[1] > 6)
         
         if has_deepmet == True and 'deepMETResponse' not in resolutions_arr.keys():
@@ -149,6 +147,7 @@ def evaluate(model, device, loss_fn, dataloader, metrics, deltaR, deltaR_dz, mod
         for i in range(1, len(bin_edges)):
             print(type(inds))
             print(type(np.where(inds==i)[0]))
+            print(np.where(inds!=i)[0])
             print(type(R_arr))
             R_i=R_arr[np.where(inds==i)[0]]
             R_hist.append(np.mean(R_i))

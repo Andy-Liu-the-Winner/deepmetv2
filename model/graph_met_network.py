@@ -38,7 +38,8 @@ class GraphMETNetwork(nn.Module):
         for i in range(conv_depth):
             mesg = nn.Sequential(nn.Linear(2*hidden_dim, hidden_dim))
             self.conv_continuous.append(nn.ModuleList())
-            self.conv_continuous[-1].append(EdgeConv(nn=mesg).jittable())
+            # EdgeConv is automatically JIT-compatible, jittable() method is deprecated in PyTorch
+            self.conv_continuous[-1].append(EdgeConv(nn=mesg)) 
             self.conv_continuous[-1].append(nn.BatchNorm1d(hidden_dim))
 
         self.output = nn.Sequential(nn.Linear(hidden_dim, hidden_dim//2),

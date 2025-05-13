@@ -43,9 +43,11 @@ class Net(nn.Module):
                                         conv_depth=2)
     
     def forward(self, x_cont, x_cat, edge_index, batch):
+        # Apply mask to ignore padded nodes
+        mask = (x_cont[:, 0] != 0)  # First feature is non-zero for real nodes
+        x_cont = x_cont * mask.float().unsqueeze(-1)
         weights = self.graphnet(x_cont, x_cat, edge_index, batch)
-        relu_layer = nn.ReLU() #ReLU weights
-        return relu_layer(weights)
+        return torch.relu(weights) * mask.float()  # Apply mask to final weights
         # return torch.sigmoid(weights) #old sigmoid weights
 
 def loss_fn_weighted(weights, prediction, truth, batch, sample_weight=None):
