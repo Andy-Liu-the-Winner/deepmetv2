@@ -7,10 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.utils import to_undirected
-from torch_cluster import radius_graph, knn_graph
-# from torch_geometric.datasets import MNISTSuperpixels
-# what is this MNISTSuperpixels for????
-import torch_geometric.transforms as T
+from torch_cluster import radius_graph
 from torch_geometric.data import DataLoader
 from tqdm import tqdm
 import argparse
@@ -26,9 +23,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--restore_file', default=None,
                     help="Optional, name of the file in --model_dir containing weights to reload before \
                     training")  # 'best' or 'train'
-parser.add_argument('--data', default='/hildafs/projects/phy230010p/andy_liu/deepmetv2/data_znunu/run3/',
+parser.add_argument('--data', default='/hildafs/projects/phy230010p/share/NanoAOD/npz_files/dy',
                     help="Name of the data folder")
-parser.add_argument('--ckpts', default='/hildafs/projects/phy230010p/andy_liu/deepmetv2/ckpts_znunu_response_4000',
+parser.add_argument('--ckpts', default='/hildafs/projects/phy230010p/andy_liu/deepmetv2/ckpts',
                     help="Name of the ckpts folder")
 
 scale_momentum = 128
@@ -37,6 +34,10 @@ def train(model, device, optimizer, scheduler, loss_fn, dataloader, epoch):
     model.train()
     loss_avg_arr = []
     loss_avg = utils.RunningAverage()
+    print('dataloader:', dataloader)
+    print('dataloader len:', dataloader.__len__())
+    print('dataloader dataset:', dataloader.dataset)
+    print('dataloader dataset len:', dataloader.dataset.__len__())
     with tqdm(total=len(dataloader)) as t:
         for data in dataloader:
             print("data:",data)
@@ -47,6 +48,7 @@ def train(model, device, optimizer, scheduler, loss_fn, dataloader, epoch):
             x_cont = data.x[:,:8] #include puppi
             #x_cont = data.x[:,:7] #remove puppi
             x_cat = data.x[:,8:].long()
+            print(x_cat)
             phi = torch.atan2(data.x[:,1], data.x[:,0])
             etaphi = torch.cat([data.x[:,3][:,None], phi[:,None]], dim=1)        
             # NB: there is a problem right now for comparing hits at the +/- pi boundary
@@ -56,8 +58,6 @@ def train(model, device, optimizer, scheduler, loss_fn, dataloader, epoch):
             loss = loss_fn(result, data.x, data.y, data.batch)
             loss.backward()
             optimizer.step()
-            # update the average loss
-            loss_avg_arr.append(loss.item())
             loss_avg.update(loss.item())
             t.set_postfix(loss='{:05.3f}'.format(loss_avg()))
             t.update()
@@ -73,11 +73,22 @@ if __name__ == '__main__':
                                                batch_size=64,
                                                validation_split=.25)
     
+    print(dataloaders)
     print(dataloaders.__len__())
-    
+        
     train_dl = dataloaders['train']
     test_dl = dataloaders['test']
 
+    print('train_dl_dataset:', train_dl.dataset)
+    print('test_dl_dataset:', test_dl.dataset)
+
+    # print the shape of train_dl and test_dl
+    print('train_dl_dataset shape:', train_dl.dataset[0].x.shape)
+    print('train_dl_dataset x', train_dl.dataset[0].x)
+    print('train_dl_dataset x', train_dl.dataset[1].x)
+    print('test_dl_dataset shape:', test_dl.dataset[0].x.shape)
+    print('train_dl_dataset y shape:', train_dl.dataset[0].y.shape)
+    print('test_dl_dataset y shape:', test_dl.dataset[0].y.shape)
     print(train_dl.dataset.__len__())
     print(test_dl.dataset.__len__())
     print(type(train_dl))
@@ -87,6 +98,7 @@ if __name__ == '__main__':
 
     norm = torch.tensor([1./scale_momentum, 1./scale_momentum, 1./scale_momentum, 1., 1., 1., 1., 1.]).to(device)   # pt, px, py: scale by 128      
     
+    print("initializing model")
     model = net.Net(8, 3, norm).to(device) #include puppi
     print('model initialized')
     #model = net.Net(7, 3).to(device) #remove puppi
@@ -173,3 +185,4 @@ if __name__ == '__main__':
 
     loss_log.close()
 
+    print('Training completed successfully')
